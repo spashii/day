@@ -1,7 +1,7 @@
 cask "day" do
   version "0.1.0"
   # Placeholder until the first release: tools/release.sh writes the real checksum.
-  sha256 "0000000000000000000000000000000000000000000000000000000000000000"
+  sha256 "df2ee4450410e06a323b1d24198a261970ab65eca93e767257763924ebde1409"
 
   # The address redirects to the GitHub release (v<version>/Day-<version>.dmg, the name
   # tools/release.sh gives the image), so apps.idea2prod.in can count downloads by version.
