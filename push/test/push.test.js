@@ -14,15 +14,19 @@ const RESOURCE_URI = `https://www.googleapis.com/calendar/v3/calendars/${encodeU
 
 let apnsCalls;
 let apnsReplies;
+let duringApns; // runs inside the first APNs call, to land a notification mid-push
 let realFetch;
+const HOUR = 60 * 60 * 1000;
 
-// Durable Object storage outlives a test, so each one starts with empty objects.
+// D1 rows and Durable Object storage outlive a test, so each one starts empty.
 beforeEach(async () => {
+  await env.DB.batch([env.DB.prepare("DELETE FROM channels"), env.DB.prepare("DELETE FROM installs")]);
   for (const installId of [IPHONE, MAC]) {
     await runInDurableObject(coalescer(installId), (instance) => instance.forget());
   }
   apnsCalls = [];
   apnsReplies = [];
+  duringApns = null;
   realFetch = globalThis.fetch;
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
     const request = new Request(input, init);
@@ -34,6 +38,11 @@ beforeEach(async () => {
       headers: Object.fromEntries(request.headers),
       body: await request.json(),
     });
+    if (duringApns) {
+      const hook = duringApns;
+      duringApns = null;
+      await hook();
+    }
     const reply = apnsReplies.shift();
     if (reply instanceof Error) throw reply;
     if (!reply) return new Response(null, { status: 200, headers: { "apns-id": crypto.randomUUID() } });
@@ -42,6 +51,7 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
 });
 
@@ -118,6 +128,17 @@ function seedWidgetSends(installId, minutesAgo) {
 
 function storedWidgetSends(installId) {
   return runInDurableObject(coalescer(installId), (_instance, state) => state.storage.get("widgetPushes"));
+}
+
+// Every key the Durable Object stores for an install, sorted.
+function storedKeys(installId) {
+  return runInDurableObject(coalescer(installId), async (_instance, state) => [...(await state.storage.list()).keys()].sort());
+}
+
+// Moves the clock the Durable Object reads, without touching timers.
+function setNow(time) {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(time);
 }
 
 // One Google change, then the end of its coalescing window.
@@ -236,7 +257,10 @@ describe("POST /day/push", () => {
 
     expect(await runDurableObjectAlarm(coalescer(IPHONE))).toBe(true);
     expect(apnsCalls).toHaveLength(2);
-    expect(await runDurableObjectAlarm(coalescer(IPHONE))).toBe(false);
+    // The alarm left behind only deletes the send time, an hour on. It sends nothing.
+    expect(await pendingAlarm(IPHONE)).toBeGreaterThan(before + HOUR);
+    expect(await runDurableObjectAlarm(coalescer(IPHONE))).toBe(true);
+    expect(apnsCalls).toHaveLength(2);
 
     // The next change after the window opens a new one.
     await notify(token);
@@ -395,6 +419,135 @@ describe("widget push rate limit", () => {
   });
 });
 
+describe("widget send times are deleted, not just ignored", () => {
+  it("stores only the send times once the push is out, and arms an alarm for the oldest one's hour", async () => {
+    const token = await registerIphone();
+    await seedWidgetSends(IPHONE, [50]);
+    await changeAndWait(token);
+    const sends = await storedWidgetSends(IPHONE);
+    expect(sends).toHaveLength(2);
+    // The install ID was stored only for the push.
+    expect(await storedKeys(IPHONE)).toEqual(["widgetPushes"]);
+    expect(await pendingAlarm(IPHONE)).toBe(sends[0] + HOUR);
+  });
+
+  it("deletes the list and leaves no alarm an hour after the last widget push", async () => {
+    const token = await registerIphone();
+    await changeAndWait(token);
+    const [sent] = await storedWidgetSends(IPHONE);
+    expect(await pendingAlarm(IPHONE)).toBe(sent + HOUR);
+    apnsCalls.length = 0;
+
+    setNow(sent + HOUR);
+    expect(await runDurableObjectAlarm(coalescer(IPHONE))).toBe(true);
+    expect(await storedKeys(IPHONE)).toEqual([]);
+    expect(await pendingAlarm(IPHONE)).toBeNull();
+    expect(apnsCalls).toHaveLength(0);
+  });
+
+  it("deletes each send time as it expires and re-arms for the next", async () => {
+    const token = await registerIphone();
+    await seedWidgetSends(IPHONE, [50, 20]);
+    await changeAndWait(token);
+    const [oldest, middle, newest] = await storedWidgetSends(IPHONE);
+    expect(await pendingAlarm(IPHONE)).toBe(oldest + HOUR);
+
+    setNow(oldest + HOUR);
+    await runDurableObjectAlarm(coalescer(IPHONE));
+    expect(await storedWidgetSends(IPHONE)).toEqual([middle, newest]);
+    expect(await pendingAlarm(IPHONE)).toBe(middle + HOUR);
+
+    setNow(newest + HOUR);
+    await runDurableObjectAlarm(coalescer(IPHONE));
+    expect(await storedKeys(IPHONE)).toEqual([]);
+    expect(await pendingAlarm(IPHONE)).toBeNull();
+  });
+
+  it("prunes on every write: a push after a quiet hour stores only the new time", async () => {
+    const token = await registerIphone();
+    await seedWidgetSends(IPHONE, [200, 150, 90]);
+    await changeAndWait(token);
+    expect(await storedWidgetSends(IPHONE)).toHaveLength(1);
+  });
+
+  it("keeps the 3 second window while the deletion alarm is pending, then re-arms it", async () => {
+    const token = await registerIphone();
+    await changeAndWait(token);
+    const [first] = await storedWidgetSends(IPHONE);
+    expect(await pendingAlarm(IPHONE)).toBe(first + HOUR);
+    apnsCalls.length = 0;
+
+    // The deletion alarm is an hour away. A change replaces it with the window.
+    const before = Date.now();
+    await Promise.all([notify(token), notify(token, "exists", "chan-2"), notify(token)]);
+    const window = await pendingAlarm(IPHONE);
+    expect(window).toBeGreaterThanOrEqual(before + 3000);
+    expect(window).toBeLessThanOrEqual(Date.now() + 3000);
+    expect(apnsCalls).toHaveLength(0);
+
+    // Still one push for the burst, and the deletion alarm is back afterwards.
+    await runDurableObjectAlarm(coalescer(IPHONE));
+    expect(apnsCalls).toHaveLength(2);
+    expect(await storedWidgetSends(IPHONE)).toHaveLength(2);
+    expect(await pendingAlarm(IPHONE)).toBe(first + HOUR);
+    expect(await storedKeys(IPHONE)).toEqual(["widgetPushes"]);
+  });
+
+  it("does not push when the deletion alarm fires, even right after a change", async () => {
+    const token = await registerIphone();
+    await changeAndWait(token);
+    const [sent] = await storedWidgetSends(IPHONE);
+    apnsCalls.length = 0;
+    setNow(sent + HOUR - 1000);
+    await notify(token);
+    expect(await pendingAlarm(IPHONE)).toBe(sent + HOUR + 2000);
+    setNow(sent + HOUR + 2000);
+    await runDurableObjectAlarm(coalescer(IPHONE));
+    // One push for the change, and the old time is gone in the same run.
+    expect(apnsCalls).toHaveLength(2);
+    const sends = await storedWidgetSends(IPHONE);
+    expect(sends).toEqual([sent + HOUR + 2000]);
+    expect(await pendingAlarm(IPHONE)).toBe(sends[0] + HOUR);
+  });
+
+  it("keeps a change that arrives while the push is in flight", async () => {
+    const token = await registerIphone();
+    await notify(token);
+    duringApns = () => notify(token, "exists", "chan-2");
+    await runDurableObjectAlarm(coalescer(IPHONE));
+    expect(apnsCalls).toHaveLength(2);
+    // The change got a window of its own and the install ID stays for it.
+    expect(await pendingAlarm(IPHONE)).not.toBeNull();
+    expect(await storedKeys(IPHONE)).toEqual(["install", "widgetPushes"]);
+
+    await runDurableObjectAlarm(coalescer(IPHONE));
+    expect(apnsCalls).toHaveLength(4);
+    expect(await storedKeys(IPHONE)).toEqual(["widgetPushes"]);
+    const sends = await storedWidgetSends(IPHONE);
+    expect(await pendingAlarm(IPHONE)).toBe(sends[0] + HOUR);
+  });
+
+  it("leaves a Mac's object empty once its push is out", async () => {
+    const token = await registerMac();
+    await changeAndWait(token, MAC, "mac-chan-1");
+    expect(apnsCalls).toHaveLength(1);
+    expect(await storedKeys(MAC)).toEqual([]);
+    expect(await pendingAlarm(MAC)).toBeNull();
+  });
+
+  it("stores nothing but the install ID and the send times", async () => {
+    const token = await registerIphone();
+    await notify(token);
+    expect(await storedKeys(IPHONE)).toEqual(["install"]);
+    await runDurableObjectAlarm(coalescer(IPHONE));
+    await notify(token);
+    expect(await storedKeys(IPHONE)).toEqual(["install", "widgetPushes"]);
+    const stored = await runInDurableObject(coalescer(IPHONE), async (_i, state) => Object.fromEntries(await state.storage.list()));
+    expect(stored.install).toBe(IPHONE);
+    expect(stored.widgetPushes.every((time) => Number.isSafeInteger(time))).toBe(true);
+  });
+});
+
 describe("DELETE /day/devices/<install>", () => {
   it("removes the install, its channels and any pending push", async () => {
     const token = await registerIphone();
@@ -410,18 +563,88 @@ describe("DELETE /day/devices/<install>", () => {
 });
 
 describe("cleanup cron", () => {
-  it("drops expired channels and installs that went quiet", async () => {
+  const DAY = 86_400_000;
+
+  it("drops expired channels", async () => {
     const now = Date.now();
     await registerIphone({ channels: [{ id: "old", expiration: now - 1 }, { id: "live", expiration: now + 60_000 }] });
-    await registerMac();
-    await env.DB.prepare("UPDATE installs SET last_seen = ?").bind(now - 40 * 86_400_000).run();
-    await env.DB.prepare("UPDATE channels SET expiry = ? WHERE install_id = ?").bind(now - 1, MAC).run();
-
-    expect(await cleanup(env, now)).toBe(1);
+    expect(await cleanup(env, now)).toBe(0);
     const channels = await env.DB.prepare("SELECT channel_id FROM channels").all();
     expect(channels.results.map((r) => r.channel_id)).toEqual(["live"]);
-    expect(await installRow(MAC)).toBeNull();
+  });
+
+  it("deletes an install silent for 30 days with its channels and Durable Object storage, even if its channels are live", async () => {
+    const now = Date.now();
+    const iphoneToken = await registerIphone();
+    const macToken = await registerMac();
+    // The iPhone has widget send times and a pending push, the Mac only a pending push.
+    await changeAndWait(iphoneToken);
+    await notify(iphoneToken);
+    await notify(macToken, "exists", "mac-chan-1");
+    expect(await storedKeys(IPHONE)).toEqual(["install", "widgetPushes"]);
+    expect(await pendingAlarm(IPHONE)).not.toBeNull();
+
+    await env.DB.prepare("UPDATE installs SET last_seen = ? WHERE install_id = ?").bind(now - 30 * DAY - 1000, IPHONE).run();
+    await env.DB.prepare("UPDATE installs SET last_seen = ? WHERE install_id = ?").bind(now - 29 * DAY, MAC).run();
+
+    expect(await cleanup(env, now)).toBe(1);
+    expect(await installRow(IPHONE)).toBeNull();
+    const iphoneChannels = await env.DB.prepare("SELECT * FROM channels WHERE install_id = ?").bind(IPHONE).all();
+    expect(iphoneChannels.results).toHaveLength(0);
+    expect(await storedKeys(IPHONE)).toEqual([]);
+    expect(await pendingAlarm(IPHONE)).toBeNull();
+
+    // Within 30 days nothing is touched.
+    expect(await installRow(MAC)).not.toBeNull();
+    const macChannels = await env.DB.prepare("SELECT * FROM channels WHERE install_id = ?").bind(MAC).all();
+    expect(macChannels.results).toHaveLength(1);
+    expect(await pendingAlarm(MAC)).not.toBeNull();
+    expect(await storedKeys(MAC)).toEqual(["install"]);
+  });
+
+  it("keeps the install row for the next run when its storage could not be cleared", async () => {
+    const now = Date.now();
+    await registerIphone();
+    await env.DB.prepare("UPDATE installs SET last_seen = ?").bind(now - 31 * DAY).run();
+    const failing = {
+      ...env,
+      COALESCER: {
+        idFromName: (name) => name,
+        get: () => ({
+          forget: async () => {
+            throw new Error("storage down");
+          },
+        }),
+      },
+    };
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await cleanup(failing, now)).toBe(0);
     expect(await installRow(IPHONE)).not.toBeNull();
+    expect(await cleanup(env, now)).toBe(1);
+    expect(await installRow(IPHONE)).toBeNull();
+  });
+
+  it("does not delete an install that registered after it was selected", async () => {
+    const now = Date.now();
+    await registerIphone();
+    await env.DB.prepare("UPDATE installs SET last_seen = ?").bind(now - 31 * DAY).run();
+    const racing = {
+      ...env,
+      COALESCER: {
+        idFromName: (name) => name,
+        get: (name) => ({
+          forget: async () => {
+            // The device checks in while the object is being cleared.
+            await env.DB.prepare("UPDATE installs SET last_seen = ?").bind(now).run();
+            await coalescer(name).forget();
+          },
+        }),
+      },
+    };
+    await cleanup(racing, now);
+    expect(await installRow(IPHONE)).not.toBeNull();
+    const channels = await env.DB.prepare("SELECT * FROM channels WHERE install_id = ?").bind(IPHONE).all();
+    expect(channels.results).toHaveLength(2);
   });
 });
 

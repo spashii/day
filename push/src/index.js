@@ -193,22 +193,37 @@ export function parseRegistration(body) {
   return { installId, platform: body.platform, environment: body.environment, tokens, channels };
 }
 
-/** Drops expired channels, then installs that have none left and stopped registering. */
+/**
+ * Drops expired channels, then every install that has not registered for 30
+ * days, with its channels and its Durable Object storage. That is the retention
+ * the privacy page promises, so it does not depend on the install's channels.
+ * The Durable Object goes first: if clearing it fails, the install row stays and
+ * the next run tries again, rather than leaving storage nothing points to.
+ */
 export async function cleanup(env, now) {
   await env.DB.prepare("DELETE FROM channels WHERE expiry < ?").bind(now).run();
-  const { results } = await env.DB.prepare(
-    `SELECT install_id FROM installs
-     WHERE last_seen < ? AND NOT EXISTS (SELECT 1 FROM channels WHERE channels.install_id = installs.install_id)
-     LIMIT ?`,
-  )
-    .bind(now - STALE_INSTALL_MS, MAX_FORGET_PER_RUN)
+  const cutoff = now - STALE_INSTALL_MS;
+  const { results } = await env.DB.prepare("SELECT install_id FROM installs WHERE last_seen < ? LIMIT ?")
+    .bind(cutoff, MAX_FORGET_PER_RUN)
     .all();
   if (results.length === 0) return 0;
-  await env.DB.prepare(`DELETE FROM installs WHERE install_id IN (${results.map(() => "?").join(", ")})`)
-    .bind(...results.map((row) => row.install_id))
-    .run();
-  await Promise.all(results.map((row) => coalescer(env, row.install_id).forget()));
-  return results.length;
+
+  const outcomes = await Promise.allSettled(results.map((row) => coalescer(env, row.install_id).forget()));
+  const cleared = results.filter((_row, i) => outcomes[i].status === "fulfilled").map((row) => row.install_id);
+  const failed = outcomes.find((outcome) => outcome.status === "rejected");
+  if (failed) console.error(`day-push: cleanup could not clear storage: ${failed.reason?.name ?? "Error"}`);
+  if (cleared.length === 0) return 0;
+
+  // last_seen is checked again: an install that registered since the select is kept.
+  const marks = cleared.map(() => "?").join(", ");
+  await env.DB.batch([
+    env.DB.prepare(
+      `DELETE FROM channels WHERE install_id IN
+         (SELECT install_id FROM installs WHERE last_seen < ? AND install_id IN (${marks}))`,
+    ).bind(cutoff, ...cleared),
+    env.DB.prepare(`DELETE FROM installs WHERE last_seen < ? AND install_id IN (${marks})`).bind(cutoff, ...cleared),
+  ]);
+  return cleared.length;
 }
 
 function coalescer(env, installId) {

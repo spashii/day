@@ -14,6 +14,17 @@
 // calendar changes (a colleague reorganizing a shared calendar) would leave the
 // Lock Screen without reloads for the rest of the day. The background push is
 // not limited here: iOS throttles it on its own.
+//
+// What the object stores, and nothing else: the install ID while a push is
+// pending, and the send times of the last hour's accepted widget pushes. One
+// alarm does two jobs. After a notification it is the end of the coalescing
+// window. Otherwise it is the moment the oldest send time turns an hour old,
+// when it deletes that time and arms itself for the next one, so the list is
+// gone an hour after the last widget push and no send time outlives its hour.
+// The install ID is the one signal that tells the two apart: it is stored only
+// while a push is pending. This is the per-device promise on the privacy page
+// (see "Stored per device" in README.md): adding anything here needs the copy
+// owner's sign-off first.
 
 import { DurableObject } from "cloudflare:workers";
 import { DEAD_TOKEN_REASONS, providerToken, sendPush } from "./apns.js";
@@ -24,6 +35,7 @@ const WIDGET_BURST = 3;
 const WIDGET_HOUR_MS = 60 * 60 * 1000;
 const WIDGET_SPACING_MS = 15 * 60 * 1000;
 const WIDGET_SENDS_KEY = "widgetPushes";
+const INSTALL_KEY = "install"; // present only while a push is pending
 
 export class InstallCoalescer extends DurableObject {
   /** Schedules a push at the end of the window, unless one is already pending. */
@@ -31,27 +43,38 @@ export class InstallCoalescer extends DurableObject {
     const storage = this.ctx.storage;
     const now = Date.now();
     const pending = await storage.getAlarm();
-    // An alarm in the future already covers this notification. One at or before
-    // now is firing, possibly with a sync already under way, so schedule another.
-    if (pending !== null && pending > now) return;
-    await storage.put("install", installId);
+    // A future alarm covers this notification only if it is a push alarm, which
+    // is when an install ID is stored. Otherwise it is the alarm that deletes
+    // old send times, and the window replaces it until the push re-arms it.
+    // An alarm at or before now is firing, possibly with a sync already under
+    // way, so schedule another.
+    if (pending !== null && pending > now && (await storage.get(INSTALL_KEY)) !== undefined) return;
+    await storage.put(INSTALL_KEY, installId);
     await storage.setAlarm(now + windowMs(this.env));
   }
 
   async alarm() {
     const storage = this.ctx.storage;
-    const installId = await storage.get("install");
-    if (!installId) return;
     const now = Date.now();
+    const installId = await storage.get(INSTALL_KEY);
     const sends = recentWidgetSends((await storage.get(WIDGET_SENDS_KEY)) ?? [], now);
-    const results = await pushInstall(this.env, installId, { now, widgets: widgetPushAllowed(sends, now) });
-    // A push Apple refused spent no budget, so only accepted ones count.
-    if (results.some((result) => result.kind === "widgets" && result.ok)) sends.push(now);
+    if (installId) {
+      const results = await pushInstall(this.env, installId, { now, widgets: widgetPushAllowed(sends, now) });
+      // A push Apple refused spent no budget, so only accepted ones count.
+      if (results.some((result) => result.kind === "widgets" && result.ok)) sends.push(now);
+    }
     if (sends.length > 0) await storage.put(WIDGET_SENDS_KEY, sends);
     else await storage.delete(WIDGET_SENDS_KEY);
+    // A notification that came in while the push was in flight set a new alarm,
+    // later than this run started. Leave it: it keeps the install ID, and its
+    // own run prunes and re-arms.
+    const next = await storage.getAlarm();
+    if (next !== null && next > now) return;
+    await storage.delete(INSTALL_KEY);
+    if (sends.length > 0) await storage.setAlarm(sends[0] + WIDGET_HOUR_MS);
   }
 
-  /** Drops the pending push and the stored install ID. */
+  /** Drops the pending push, the stored install ID and the send times. */
   async forget() {
     await this.ctx.storage.deleteAlarm();
     await this.ctx.storage.deleteAll();

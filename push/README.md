@@ -63,7 +63,7 @@ A change Google reports on a new channel in the seconds between `events.watch` a
 
 ## The pushes
 
-A burst of notifications for one install becomes one push at the end of a 3 second window (`COALESCE_MS`). The next change after that opens a new window, so an install gets at most one push per window and no change is left without one. The window lives in a Durable Object per install, `InstallCoalescer`, with an alarm. A timestamp in D1 could only throttle on the leading edge and would drop a change that lands just after a push. The alarm is a timer that outlives the request and is retried if it fails, and the object serializes notifications for one install, so two in the same instant cannot both schedule a push.
+A burst of notifications for one install becomes one push at the end of a 3 second window (`COALESCE_MS`). The next change after that opens a new window, so an install gets at most one push per window and no change is left without one. The window lives in a Durable Object per install, `InstallCoalescer`, with an alarm. The same alarm deletes old send times (see the rate limit below). The object stores the install ID only while a push is pending, and that is how it tells the two jobs apart: a change that arrives while the deletion alarm is pending replaces it with the 3 second window, and the push re-arms it. A timestamp in D1 could only throttle on the leading edge and would drop a change that lands just after a push. The alarm is a timer that outlives the request and is retried if it fails, and the object serializes notifications for one install, so two in the same instant cannot both schedule a push.
 
 When the alarm fires:
 
@@ -81,7 +81,25 @@ Apple budgets WidgetKit pushes per app and delivers them opportunistically, and 
 - A push the limit holds back is dropped, not delayed. The background push still goes out on the 3 second window, so the app syncs and reloads its own timelines. A change right after the three are spent can therefore reach the Lock Screen late, until the next widget push is allowed or the app next reloads the timelines. Delaying it to the end of the 15 minutes would need a second timer and more stored state, and is not done.
 - Only pushes Apple accepted count. The background push is never limited here because iOS throttles it by itself.
 
-The Durable Object keeps the send times (milliseconds since the epoch) of the accepted widget pushes. They are pruned to the last hour each time a push is considered, so after a quiet hour the stored times are older than an hour until that install's next push, and `forget()` removes them.
+The Durable Object keeps the send times (milliseconds since the epoch) of the accepted widget pushes, and each one is deleted when it turns an hour old. Every write prunes the list to the last hour. The object's alarm also does the deleting: after a push that leaves send times, the alarm is set for the hour mark of the oldest one. It deletes the expired times and arms itself again for the next, so the stored list is gone an hour after the install's last widget push. `forget()` removes it at once.
+
+## Stored per device
+
+This is what the privacy page promises, word for word:
+
+> For each device, Day's server keeps a random install ID, random IDs for its Google change notices with their expiry times, its Apple push addresses, the device type, whether it runs a test or release build, when it last checked in, and the times of its Lock Screen updates in the last hour. A device that hasn't checked in for 30 days is deleted. Nothing else.
+
+Any new field the relay stores per device goes to the copy owner before it ships, so the privacy page stays true.
+
+Where each item lives:
+
+- Random install ID: `installs.install_id`, and `channels.install_id` to tie a channel to it.
+- Random IDs for its Google change notices with their expiry times: `channels.channel_id` and `channels.expiry`.
+- Apple push addresses: `installs.app_token` and `installs.widget_token`.
+- Device type: `installs.platform`.
+- Test or release build: `installs.environment`.
+- When it last checked in: `installs.last_seen`.
+- Times of its Lock Screen updates in the last hour: the Durable Object's `widgetPushes` list.
 
 ## What it stores
 
@@ -90,11 +108,11 @@ D1 database `day-push`, schema in `migrations/`:
 - `installs`, one row per install: install ID, platform (`ios` or `macos`), environment (`sandbox` or `production`), app token, widget token, last seen (when it last registered).
 - `channels`, one row per channel: channel ID, install ID, expiry.
 
-Each install's Durable Object holds its install ID, the pending alarm and the send times of its widget pushes from the last hour.
+Each install's Durable Object holds the send times of its widget pushes from the last hour. While a push is pending it also holds the install ID and an alarm set to the end of the 3 second window; the alarm is otherwise the deletion of the oldest send time. Nothing else is in it, and the Durable Object's storage is deleted with the install (`forget()`, which calls `deleteAll`).
 
 Never stored or logged: calendar IDs, email addresses, Google tokens, event data, IP addresses, and when an install first registered. Last seen is kept only because the 30 day cleanup needs it.
 
-A cron at 03:17 UTC deletes expired channels, then installs that have no channels left and have not registered for 30 days.
+A cron at 03:17 UTC deletes expired channels, then every install that has not registered for 30 days, whether or not it still has channels, together with its channels and its Durable Object storage. It handles 40 installs a run and takes the rest on the next. An install whose Durable Object could not be cleared keeps its row, so the next run tries again.
 
 Workers observability is off on purpose: invocation logs record request details, and Google's headers carry the calendar ID. Do not turn it on, add Logpush or a tail consumer, or run `wrangler tail` on this Worker or on `app-updates`, because a tail shows each request's headers. The Worker's own log lines (an APNs failure reason, a storage failure name) carry nothing from the request.
 
@@ -123,4 +141,4 @@ npx wrangler d1 migrations apply day-push --remote    # only when migrations/ ch
 npx wrangler deploy
 ```
 
-The tests cover registration and the stored columns, token checks, channels an install no longer holds, coalescing, the widget push rate limit, the push headers and payloads, the JWT signature, dropping dead tokens, deletion and the cron. The privacy test sends notifications carrying an email address in `X-Goog-Resource-URI` through the success path, a forged token, a channel the install does not hold, Apple refusing the push and storage failing, and fails if any log line, table row or Durable Object entry contains it.
+The tests cover registration and the stored columns, token checks, channels an install no longer holds, coalescing, the widget push rate limit, deleting send times when they expire (alarm and write pruning, with the 3 second window intact), the push headers and payloads, the JWT signature, dropping dead tokens, deletion and the cron (30 days silent deletes the install, its channels and its Durable Object storage). The privacy test sends notifications carrying an email address in `X-Goog-Resource-URI` through the success path, a forged token, a channel the install does not hold, Apple refusing the push and storage failing, and fails if any log line, table row or Durable Object entry contains it.
