@@ -46,7 +46,7 @@ public func monthMark(
     }
 
     // Rule 4 is the helper; rule 5 is the branch. Without the branch every timed one-off is
-    // titled, which in his data more than doubles the titled lines in a month.
+    // titled, which in a busy working calendar more than doubles the titled lines in a month.
     // RULE 5, short internal one-offs are dots:
     if !hasReasonForTitle(event, account: account, in: local) {
         return .dot

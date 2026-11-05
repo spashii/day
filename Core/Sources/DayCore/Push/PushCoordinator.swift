@@ -97,7 +97,7 @@ public actor PushCoordinator {
         store.widgetToken()
     }
 
-    /// The channels open now, for tests and the brief's numbers.
+    /// The channels open now, for tests and for counting them.
     public var openChannels: [WatchedChannel] {
         store.state().channels
     }

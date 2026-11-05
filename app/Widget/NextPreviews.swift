@@ -5,10 +5,10 @@ import WidgetKit
 
 // One preview per family. Xcode draws an accessory family in the vibrant rendering mode the
 // Lock Screen uses, and steps through the timeline entries: the six times of the invented
-// Wednesday that the brief's Lock Screen table fixes, then every state.
+// Wednesday that the golden Lock Screen table fixes, then every state.
 
 /// Entries built by the real rules from the invented week, at fixed times, so a preview, a
-/// golden test and the brief's table can be compared by eye.
+/// golden test and its table can be compared by eye.
 enum NextPreviewData {
     private final class BundleToken {}
 
@@ -55,7 +55,7 @@ enum NextPreviewData {
         goldenTimes.map { entry(at: $0) }
     }
 
-    /// Every state the brief names: no account, nothing ahead, an account signed out, data
+    /// Every state the widget has: no account, nothing ahead, an account signed out, data
     /// over 2 hours old (`As of 9:10`), data from yesterday (`As of Tue 23:10`) and over 24
     /// hours old (`Open to update`).
     static var states: [NextEntry] {

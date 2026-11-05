@@ -3,7 +3,7 @@ import DayCore
 import SwiftUI
 import WidgetKit
 
-// One preview per family, stepping through the invented Wednesday at the brief's Lock Screen
+// One preview per family, stepping through the invented Wednesday at the golden Lock Screen
 // times and then the states. Xcode's canvas switches between the full-color, accented and
 // vibrant rendering modes, which is the one place those can be seen before the desktop.
 

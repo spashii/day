@@ -34,7 +34,7 @@ struct ModelTests {
         #expect(byName["you@acme.com"]?.colorKey == .blue)
     }
 
-    /// The invented Wednesday from the brief: six counted events, plus the all-day line,
+    /// The invented Wednesday of the design: six counted events, plus the all-day line,
     /// a working location, a declined call and the investor call on both accounts.
     @Test func inventedWednesday() throws {
         let fixture = try Self.fixture()

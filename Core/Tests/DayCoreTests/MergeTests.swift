@@ -3,8 +3,8 @@ import Testing
 
 @testable import DayCore
 
-/// Section 10 of the brief: one event across accounts. His data has no duplicates today, so
-/// the guard is proven here with fixtures.
+/// One event across accounts. Real calendars rarely produce a duplicate, so the guard is
+/// proven here with fixtures.
 struct MergeTests {
     let calendar = TestData.amsterdam
 

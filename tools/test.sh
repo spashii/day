@@ -12,8 +12,9 @@ if [[ ${1:-} != -* && -n ${1:-} ]]; then
   shift
 fi
 if [[ $(uname) != Darwin ]]; then
+  [[ -n ${DAY_MAC:-} ]] || { print -u2 "Set DAY_MAC to the ssh host of the Mac that builds Day."; exit 1; }
   $root/tools/sync.sh $name
-  exec ssh ${DAY_MAC:-mac-air} "cd ~/build/$name && zsh -lic 'tools/test.sh ${(q)@}'"
+  exec ssh $DAY_MAC "cd ~/build/$name && zsh -lic 'tools/test.sh ${(q)@}'"
 fi
 
 cd $root/Core

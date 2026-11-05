@@ -259,7 +259,7 @@ public enum GoogleDecoding {
         return nil
     }
 
-    /// Meet, Zoom, Teams, Webex and Whereby, the services his meetings use.
+    /// The meeting services Day recognizes: Meet, Zoom, Teams, Webex and Whereby.
     static func isMeetingLink(_ url: URL) -> Bool {
         guard let host = url.host()?.lowercased() else { return false }
         let hosts: Set = [

@@ -3,7 +3,7 @@ import SwiftUI
 import WidgetKit
 
 /// Draws the Lock Screen widget's own views (`NextInlineView`, `NextRectangularView`,
-/// `NextCircularView`) for every row of the brief's Lock Screen table and every widget state,
+/// `NextCircularView`) for every row of the golden Lock Screen table and every widget state,
 /// one PNG per row, for tools/screenshots.sh. Launched with `-ShotsTo <folder>`; it writes
 /// `done.txt` (file, tab, caption per line) last, which is what the script waits for.
 ///
@@ -53,7 +53,7 @@ enum WidgetShots {
             rows.append(
                 Row(
                     file: "golden-\(clock.replacingOccurrences(of: ":", with: "")).png",
-                    caption: "\(clock), the brief's Lock Screen table", clock: clock))
+                    caption: "\(clock), the golden Lock Screen table", clock: clock))
         }
         rows += [
             Row(

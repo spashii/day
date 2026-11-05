@@ -170,7 +170,7 @@ extension WidgetEntry {
         return minutes == 1 ? "in 1 minute" : "in \(minutes) minutes"
     }
 
-    /// The circular family as the brief's table writes it: `THU 9:30`, `9:30`, or `symbol`.
+    /// The circular family as the design's table writes it: `THU 9:30`, `9:30`, or `symbol`.
     var circularText: String {
         switch circular {
         case .symbol: "symbol"

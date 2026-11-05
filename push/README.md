@@ -130,6 +130,8 @@ npx wrangler secret put APNS_KEY
 npx wrangler secret put APNS_KEY_ID
 ```
 
+The values live outside the repository; each command asks for its value.
+
 ## Deploy and test
 
 Run these from this folder under `zsh -lic`, with a token for the Cloudflare account that serves apps.idea2prod.in in `CLOUDFLARE_API_TOKEN`:

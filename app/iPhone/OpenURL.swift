@@ -39,7 +39,7 @@ enum PhoneOpener {
 extension HandoffAction {
     /// The handoff the views call for `Join` and `Open in Google Calendar`, through
     /// `PhoneOpener`. The iPhone sends no account hint: the universal link opens whichever
-    /// account Google Calendar has signed in, which the brief marks for a device test.
+    /// account Google Calendar has signed in, which only a test on a device can confirm.
     static var phone: HandoffAction {
         HandoffAction { url, _ in
             Task { await PhoneOpener.open(url) }

@@ -15,7 +15,7 @@ protocol CalendarStore: AnyObject, Observable {
     /// Every account's calendars, accounts in order and each account's calendars in
     /// Google's order. A calendar shared into two accounts appears once.
     var calendars: [CalendarInfo] { get }
-    /// What the screen says about fetching (section 11 of the brief).
+    /// What the screen says about fetching: loading, offline or Google unreachable.
     var status: StoreStatus { get }
     /// When Google last answered. `Offline. Showing events as of 9:40.` reads it.
     var lastFetchedAt: Date? { get }

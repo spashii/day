@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Pictures of every screen the brief lists, all on the invented fixture:
+# Pictures of every screen, all on the invented fixture:
 #   tools/screenshots.sh [NAME] [iphone] [access] [lock] [widget] [mac] [macwidget] [icon]
 #
 # From Linux it syncs the checkout to ~/build/NAME on the Mac (tools/sync.sh, NAME defaults
@@ -40,7 +40,8 @@ parts=(iphone access lock widget mac macwidget icon)
 (( $# )) && parts=("$@")
 
 if [[ $(uname) != Darwin ]]; then
-  host=${DAY_MAC:-mac-air}
+  [[ -n ${DAY_MAC:-} ]] || { print -u2 "Set DAY_MAC to the ssh host of the Mac that builds Day."; exit 1; }
+  host=$DAY_MAC
   out=${DAY_ARTIFACTS:-$HOME/artifacts/day}
   $root/tools/sync.sh $name
   ssh $host "cd ~/build/$name && zsh -lic 'DAY_DERIVED=${DAY_DERIVED:-} DAY_SIM=${DAY_SIM:-} tools/screenshots.sh ${(j: :)parts}'"
@@ -544,7 +545,7 @@ index() {
     local -A notes=(
       iphone "FixtureStore with -Now on Wednesday 4 November 2026 in Amsterdam; the status bar shows the same clock."
       lock "Added through the Lock Screen editor's own gallery and drawn by the system in its vibrant mode. The widget reads the real clock and the bundled invented week, moved so its Wednesday is today, in Amsterdam time; the clock above it is the Mac's own zone. Always-On is the dimmed state the side button leaves the simulator in."
-      widget "Drawn by the widget's own views (NextViews.swift) from widgetTimeline, at the six times of the brief's table and in each state, on a dark ground. Only the Lock Screen draws the vibrant rendering, so these are the text and layout, not the final pixels."
+      widget "Drawn by the widget's own views (NextViews.swift) from widgetTimeline, at the six times of the golden table and in each state, on a dark ground. Only the Lock Screen draws the vibrant rendering, so these are the text and layout, not the final pixels."
       mac "Drawn by the app's own views in tools/shots, in windows placed off every screen. Glass (the inspector's floating pane, the menu bar panel's material) is drawn by the window server and does not appear here; a capture of the real window needs an unlocked session."
       macwidget "Drawn by the desktop widget's own views (app/MacWidget) from TodayProvider, small, medium and large side by side on the widget background. The desktop's dimmed and accented styles are drawn by the system; the pictures without color stand in for them. timeline.txt lists the entries."
       icon "Rendered from app/AppIcon.icon by Icon Composer's ictool, iOS, in each appearance the system can ask for."

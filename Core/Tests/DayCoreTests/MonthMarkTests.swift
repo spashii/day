@@ -3,8 +3,8 @@ import Testing
 
 @testable import DayCore
 
-/// Section 6 of the brief: the five classification rules, first match wins, on the invented
-/// week and on one event at a time.
+/// The five classification rules of the month marks, first match wins, on the invented week
+/// and on one event at a time.
 struct MonthMarkTests {
     let calendar = TestData.amsterdam
 

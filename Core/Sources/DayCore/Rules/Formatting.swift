@@ -5,7 +5,7 @@ import Foundation
 /// machine. Counts one to nine are words, 10 and up numerals.
 ///
 /// Times are written without a leading zero in 24-hour locales (`9:30`, `14:00`), because the
-/// brief's copy reads that way and a Lock Screen line has no room to spare. 12-hour locales
+/// design's copy reads that way and a Lock Screen line has no room to spare. 12-hour locales
 /// use the system's own pattern (`9:30 AM`), which this file never rewrites.
 public enum Formatting {
     // MARK: Counts and durations
@@ -148,7 +148,7 @@ public enum Formatting {
     /// range mark, the digits and the order follow the device's language and region:
     /// `Wednesday 4 November, 14:00` to `15:00` for one day, both dates for an event that
     /// crosses midnight, and `Wednesday 4 November` to `Friday 6 November` for an all-day
-    /// range. The brief's other time strings are written by hand (`9:30`, `14:00 to
+    /// range. Day's other time strings are written by hand (`9:30`, `14:00 to
     /// 15:00`), so this line is the one place a 24-hour time may carry a leading zero.
     public static func eventWhen(_ event: Event, calendar: Calendar) -> String {
         let interval = Date.IntervalFormatStyle(

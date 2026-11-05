@@ -3,7 +3,7 @@ import Testing
 
 @testable import DayCore
 
-/// Section 7 of the brief: the Day list, top to bottom.
+/// The Day list, top to bottom.
 struct DayRowsTests {
     let calendar = TestData.amsterdam
 

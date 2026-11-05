@@ -3,7 +3,7 @@ import Testing
 
 @testable import DayCore
 
-/// Section 4 of the brief: the Lock Screen table on the invented Wednesday, the line 2 and
+/// The Lock Screen table on the invented Wednesday, the line 2 and
 /// line 3 rules, Always-On, the states, staying correct, and the timeline's entry times
 /// across midnight and daylight saving.
 struct WidgetTimelineTests {
