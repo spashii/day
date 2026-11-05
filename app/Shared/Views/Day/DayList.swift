@@ -1,9 +1,10 @@
 import DayCore
 import SwiftUI
 
-/// One day as a plain system `List`: the summary and its status lines, the all-day lines,
-/// the Earlier row, the now line, the event rows and the gap rows. The iPhone Day, the Mac
-/// day pane and the Mac menu bar panel all draw it, so there is one day design.
+/// One day as a plain system `List`: the all-day lines, the Earlier row, the now line, the
+/// event rows and the gap rows, with a state line above them only when there is one to say
+/// (loading, nothing scheduled, offline, signed out). The iPhone Day, the Mac day pane and
+/// the Mac menu bar panel all draw it, so there is one day design.
 ///
 /// It redraws every minute inside `TimelineView`, reading the time from the store, so a
 /// fixture's `-Now` holds still for screenshots while a live store moves.
@@ -14,10 +15,9 @@ struct DayList: View {
     @Environment(\.dynamicTypeSize) private var typeSize
 
     let day: CivilDate
-    /// The day above the summary. The Mac inspector writes `Wednesday 4 November` in Title 2;
+    /// The day above its rows. The Mac inspector writes `Wednesday 4 November` in Title 2;
     /// the iPhone, whose large title is the weekday, writes `4 November` under it.
     var showsHeader = false
-    var showsSummary = true
     /// The Mac's selected event, which Tab moves and Return opens. Nil keeps it inside.
     var selection: Binding<EventID?>? = nil
     /// The event whose sheet (iPhone) or popover (Mac) is open. Nil keeps it inside.
@@ -89,8 +89,10 @@ struct DayList: View {
                     .accessibilityAddTraits(.isHeader)
             #endif
         }
-        if showsSummary {
-            DaySummary(day: day)
+        // A day that is fine starts with its events: the row exists only while a state has
+        // something to say.
+        if DayStateLines.isShown(in: store, isEmpty: items.isEmpty) {
+            DayStateLines(isEmpty: items.isEmpty)
                 .padding(.bottom, Spacing.cell)
                 .listRowSeparator(.hidden)
                 .listRowInsets(.horizontal, margin)
@@ -263,34 +265,6 @@ private struct LastRow: ViewModifier {
             content.listRowSeparator(.hidden, edges: .bottom)
         } else {
             content
-        }
-    }
-}
-
-/// The summary paragraph and the status lines under it, or the state that replaces them:
-/// `Loading…` the first time, `No calendars shown.` when every calendar is hidden.
-struct DaySummary: View {
-    @EnvironmentStore private var store
-    @Environment(\.chooseCalendars) private var chooseCalendars
-    let day: CivilDate
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.cell) {
-            if store.allCalendarsHidden {
-                SummaryParagraph(summary: Summary(first: String(localized: "No calendars shown.")))
-                if let chooseCalendars {
-                    Button("Choose Calendars…") { chooseCalendars() }
-                        .buttonStyle(.borderless)
-                }
-            } else if store.status == .loading {
-                SummaryParagraph(summary: Summary(first: String(localized: "Loading…")))
-            } else {
-                SummaryParagraph(
-                    summary: summarize(
-                        day: day, events: store.dayEvents(day), now: store.now,
-                        calendar: store.calendar))
-            }
-            StatusLines()
         }
     }
 }

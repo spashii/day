@@ -2,10 +2,10 @@ import Foundation
 import Observation
 import Sparkle
 
-/// Updates come through Sparkle: it reads the appcast on Day's website, checks each update
-/// against the signing key in Info.plist, and asks before installing. Sparkle itself asks on
-/// the second launch whether to check automatically; nothing else in Day goes online for
-/// updates.
+/// Updates come through Sparkle: it reads the appcast on Day's website (apps.idea2prod.in),
+/// checks each update against the signing key in Info.plist, and asks before installing.
+/// Sparkle itself asks on the second launch whether to check automatically; nothing else in
+/// Day goes online for updates.
 ///
 /// A run that was started with `-UseFixtures` (screenshots, tests) never starts Sparkle, so
 /// its second-launch question and its network check cannot land in a capture.
@@ -13,6 +13,8 @@ import Sparkle
 @Observable
 final class Updater {
     @ObservationIgnored private let controller: SPUStandardUpdaterController
+    /// Sparkle does not retain its delegate, so the updater has to.
+    @ObservationIgnored private let delegate = UpdaterDelegate()
     @ObservationIgnored private var observations: [NSKeyValueObservation] = []
 
     /// False while a check is already under way, and always false when Sparkle was not
@@ -31,7 +33,7 @@ final class Updater {
 
     init(start: Bool) {
         let controller = SPUStandardUpdaterController(
-            startingUpdater: start, updaterDelegate: nil, userDriverDelegate: nil)
+            startingUpdater: start, updaterDelegate: delegate, userDriverDelegate: nil)
         self.controller = controller
         let updater = controller.updater
         automatic = updater.automaticallyChecksForUpdates

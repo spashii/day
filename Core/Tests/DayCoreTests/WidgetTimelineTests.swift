@@ -33,7 +33,7 @@ struct WidgetTimelineTests {
         Row(time: "07:50", inline: "9:30 Standup",
             rectangular: ["Standup", "9:30 to 9:45", "11:00 Design review"], circular: "9:30"),
         Row(time: "09:20", inline: "9:30 Standup",
-            rectangular: ["Standup", "9:30 · in 10 min", "11:00 Design review"], circular: "9:30"),
+            rectangular: ["Standup", "9:30 · in 10 minutes", "11:00 Design review"], circular: "9:30"),
         Row(time: "11:40", inline: "12:30 Lunch with Maya",
             rectangular: ["Design review", "until 12:00", "12:30 Lunch with Maya"],
             circular: "12:30"),
@@ -180,12 +180,46 @@ struct WidgetTimelineTests {
         let day = fetched.addingTimeInterval(24 * 3600)
         let atDay = entry(events, now: day, fetchedAt: fetched)
         #expect(atDay.inline == "Fri 10:00 B")
-        // At exactly 24 hours the rectangular family still shows its event, dated.
+        // At exactly 24 hours the rectangular family still shows its event, and the data is
+        // from yesterday, so its time names the day.
         #expect(atDay.rectangular.title == "B")
-        #expect(atDay.rectangular.after == "As of 9:12")
+        #expect(atDay.rectangular.after == "As of Wed 9:12")
         let expired = entry(events, now: day.addingTimeInterval(1), fetchedAt: fetched)
         #expect(expired.inline == "Open to update")
         #expect(expired.circularText == "symbol")
+    }
+
+    @Test func asOfNamesTheDayOnceTheDayHasChanged() {
+        let events = [TestData.event("A", "2026-11-05 15:00", "2026-11-05 16:00")]
+        // Fetched on Tuesday at 11:10.
+        let fetched = TestData.date("2026-11-03 11:10")
+        // The same day: a bare time, as before.
+        #expect(entry(events, now: TestData.date("2026-11-03 13:11"), fetchedAt: fetched).rectangular.after
+            == "As of 11:10")
+        #expect(entry(events, now: TestData.date("2026-11-03 23:59"), fetchedAt: fetched).rectangular.after
+            == "As of 11:10")
+        // The next day: the weekday, in the form of line 2's `Thu 9:30`.
+        #expect(entry(events, now: TestData.date("2026-11-04 00:00"), fetchedAt: fetched).rectangular.after
+            == "As of Tue 11:10")
+        #expect(entry(events, now: TestData.date("2026-11-04 09:00"), fetchedAt: fetched).rectangular.after
+            == "As of Tue 11:10")
+        // It still beats signed out, and it still names no event.
+        let signedOut = entry(events, now: TestData.date("2026-11-04 09:00"), fetchedAt: fetched, signedOut: 1)
+        #expect(signedOut.rectangular.after == "As of Tue 11:10")
+        #expect(!RectangularLines(title: "T", after: signedOut.rectangular.after).afterNamesEvent)
+    }
+
+    @Test func theAsOfLineChangesAtMidnight() {
+        // Fetched at 20:00, so line 3 reads `As of 20:00` from 22:00 and turns into the
+        // weekday form at the entry for local midnight, not at the next reload.
+        let fetched = TestData.date("2026-11-04 20:00")
+        let now = TestData.date("2026-11-04 22:30")
+        let timeline = widgetTimeline(
+            events: [], now: now, fetchedAt: fetched, signedOutAccounts: 0, calendar: calendar)
+        let midnight = TestData.date("2026-11-05 00:00")
+        #expect(timeline[0].rectangular.after == "As of 20:00")
+        let after = timeline.first { $0.date == midnight }
+        #expect(after?.rectangular.after == "As of Wed 20:00")
     }
 
     @Test func rectangularStopsNamingAnEventPastTwentyFourHours() {
@@ -226,6 +260,7 @@ struct WidgetTimelineTests {
         #expect(!lines("1 account signed out").afterNamesEvent)
         #expect(!lines("2 accounts signed out").afterNamesEvent)
         #expect(!lines("As of 9:12").afterNamesEvent)
+        #expect(!lines("As of Tue 11:10").afterNamesEvent)
         #expect(!lines("Last one today").afterNamesEvent)
         #expect(!lines(nil).afterNamesEvent)
     }

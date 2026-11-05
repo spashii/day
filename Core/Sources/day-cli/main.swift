@@ -8,7 +8,7 @@ import Foundation
 //               [--fetched 9:12] [--signed-out 1] [--timeline]
 //   day-cli month yyyy-mm [--now ...] [--fixture ...] [--all]
 //
-// `day` prints the summary, the rows, the menu bar label and the three Lock Screen families
+// `day` prints the rows, the menu bar label and the three Lock Screen families
 // as of `now`; `--timeline` adds every entry the widget would schedule. The widget reads the
 // data as fetched at `now` unless `--fetched` says otherwise (which brings out `As of 9:12`
 // and `Open to update`), and `--signed-out` sets the number of signed-out accounts. `month`
@@ -133,11 +133,6 @@ func printDay(
     let time = { (date: Date) in Formatting.time(date, calendar: calendar) }
 
     print("\(Formatting.dayHeader(day, calendar: calendar)) \(day.year), now \(Formatting.dayHeader(CivilDate(now, in: calendar), calendar: calendar)) \(time(now)) (\(fixture.timeZone), \(fixture.locale))")
-
-    let summary = summarize(day: day, events: events, now: now, calendar: calendar)
-    print("\nSummary")
-    print("  \(summary.first)")
-    if let second = summary.second { print("  \(second)") }
 
     print("\nRows")
     for row in dayRows(day: day, events: events, now: now, calendar: calendar) {

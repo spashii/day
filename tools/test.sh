@@ -3,7 +3,7 @@
 #
 # From Linux it syncs the checkout to ~/build/NAME on the Mac (tools/sync.sh, NAME defaults
 # to "day") and runs itself there. Arguments after NAME go to swift test, so
-# `tools/test.sh day-rules --filter SummaryTests` runs one suite.
+# `tools/test.sh day-rules --filter MenuBarLabelTests` runs one suite.
 set -euo pipefail
 root=${0:A:h:h}
 name=day

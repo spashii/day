@@ -168,6 +168,12 @@ final class FixtureStore: CalendarStore {
     /// Adds back the first fixture account not on the list, so the first-run flow can be
     /// walked through in the simulator.
     func addAccount(using session: WebAuthenticationSession) async throws {
+        addNextAccount()
+    }
+
+    /// What `addAccount` does, without Google's sheet, so a snapshot script can walk the
+    /// first-run flow.
+    func addNextAccount() {
         guard let next = fixture.accounts.first(where: { account($0.id) == nil }) else { return }
         accounts.append(next)
         accounts.sort { $0.addedAt < $1.addedAt }

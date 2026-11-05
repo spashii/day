@@ -4,12 +4,16 @@ import SwiftUI
 
 /// The menu bar item's label: plain text in the menu bar font with tabular digits, from the
 /// same `nextEvents` as the Lock Screen widget so the two never disagree about what is next.
-/// It follows the store's clock, which moves each minute on a live store.
+/// It follows the store's clock, which moves each minute on a live store. As short as the
+/// rules can make it, because macOS hides the items that do not fit beside the notch:
 ///
-/// - Quiet (next event today more than 15 minutes away): the `calendar` symbol and `14:00`.
-/// - Within 15 minutes: `Investor call in 12 min`.
-/// - In progress: `Investor call, 18 min left`.
-/// - After the last event, or nothing today: the symbol alone.
+/// - Quiet (next event today more than 15 minutes away): `14:00`.
+/// - Within 15 minutes: `in 12 min`.
+/// - In progress: `18 min left`.
+/// - After the last event, or nothing today: the `calendar` symbol alone.
+///
+/// A title of 8 characters or fewer joins the text (`14:00 Standup`); a longer one is left
+/// out, never cut.
 struct MenuBarLabelView: View {
     @EnvironmentStore private var store
 
@@ -38,8 +42,8 @@ struct MenuBarLabelView: View {
     }
 }
 
-/// The panel under the menu bar item, 320 pt wide: the summary and today's remaining rows
-/// (Earlier row, now line, `Join` in its 10-minute window), as tall as the day needs, and two
+/// The panel under the menu bar item, 320 pt wide: today's rows (all-day lines, Earlier row,
+/// now line, `Join` in its 10-minute window), as tall as the day needs, and two
 /// text buttons at the bottom. A click on a row opens the main window on that day with the
 /// event's popover. No filters, no mini month, no settings gear.
 ///

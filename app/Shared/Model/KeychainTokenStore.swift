@@ -13,7 +13,7 @@ import os
 /// is locked. Before the first unlock after a restart nothing is readable, the read throws,
 /// and both keep the data they have until it is.
 ///
-/// Mac: the login keychain, with no access group. There is no extension to share with, and
+/// Mac: the login keychain, with no access group. The desktop widget never reads tokens, and
 /// an access group there would need a provisioning profile.
 ///
 /// This file is compiled into the widget too, so it uses DayCore and Security only.
@@ -89,10 +89,10 @@ struct KeychainTokenStore: TokenStore {
 }
 
 extension KeychainTokenStore {
-    /// A keychain call that failed. `localizedDescription` is what a sign-in failure shows
-    /// after `Couldn't sign in to Google:`, so it is a plain sentence about what Day could not
-    /// do; the OSStatus and the system's own explanation go to the log, where a bug report
-    /// can use them, and never to the screen.
+    /// A keychain call that failed. `localizedDescription` is the line a failed sign-in shows,
+    /// so it is a plain sentence about what Day could not do (`Day could not save your sign-in
+    /// on this device.`); the OSStatus and the system's own explanation go to the log, where a
+    /// bug report can use them, and never to the screen.
     struct Failure: LocalizedError, CustomStringConvertible {
         enum Operation: String, Sendable {
             case read, save, remove

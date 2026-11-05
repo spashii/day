@@ -7,9 +7,9 @@ import Foundation
 /// start (when the rectangular family's line 2 starts counting down), at local midnight, and
 /// when the snapshot turns 2 and 24 hours old. Changes less than 5 minutes apart share one
 /// entry at the later of them, so the widget is never ahead of the data and never more than
-/// 5 minutes behind it. `fetchedAt` drives `As of 9:12` and, past 24 hours, `Open to update`
-/// on all three families; `signedOutAccounts` drives `1 account signed out`. Pass the
-/// snapshot's merged events.
+/// 5 minutes behind it. `fetchedAt` drives `As of 9:12` (`As of Tue 9:12` once the day has
+/// changed since) and, past 24 hours, `Open to update` on all three families;
+/// `signedOutAccounts` drives `1 account signed out`. Pass the snapshot's merged events.
 public func widgetTimeline(
     events: [Event], now: Date, fetchedAt: Date, signedOutAccounts: Int, calendar: Calendar
 ) -> [WidgetEntry] {
@@ -118,7 +118,7 @@ private func widgetEntry(
     // Rectangular is the only family that knows about now.
     let signedOut = signedOutAccounts > 0 ? Formatting.signedOut(accounts: signedOutAccounts) : nil
     let stale = age > WidgetRule.staleAfter
-        ? "As of \(Formatting.time(fetchedAt, calendar: calendar))" : nil
+        ? asOfLine(fetchedAt: fetchedAt, today: today, calendar: calendar) : nil
     let rectangular: RectangularLines
     if let shown = current ?? next {
         let following = current != nil ? ahead.first : ahead.dropFirst().first
@@ -140,6 +140,15 @@ private func widgetEntry(
         rectangular: rectangular,
         circular: circular,
         url: DayLink.day(today).url)
+}
+
+/// `As of 9:12` while the data was fetched today, `As of Tue 9:12` once the day has changed,
+/// in the form of line 2's `Thu 9:30`: a bare time would read as today's.
+private func asOfLine(fetchedAt: Date, today: CivilDate, calendar: Calendar) -> String {
+    let when = CivilDate(fetchedAt, in: calendar) == today
+        ? Formatting.time(fetchedAt, calendar: calendar)
+        : Formatting.weekdayTime(fetchedAt, calendar: calendar)
+    return "As of \(when)"
 }
 
 /// Line 2, first match: `until 15:00`; `14:00 · in 12 min` within the hour (the relative part
@@ -168,9 +177,9 @@ private func whenLine(
 /// `Last one today` when nothing does. An event on a later day with nothing after it that
 /// day has no line, because `Last one today` would be untrue.
 ///
-/// The follower carries no connective: on a 160 pt line `Then 11:00 Design review` is cut
-/// to `Then 11:00 Desi`, and `Then` is the one word that says nothing. `Also` stays, because
-/// it is what says overlap.
+/// The follower carries no connective: `11:00 Design review` is the whole line, because a
+/// leading `Then` says nothing and costs the title its last characters on a 160 pt line.
+/// `Also` stays, because it is what says overlap.
 private func followingLine(
     shown: Candidate, following: Candidate?, shownIsCurrent: Bool, now: Date, calendar: Calendar
 ) -> String? {

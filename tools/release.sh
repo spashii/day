@@ -3,11 +3,11 @@
 #
 # Run it on the Mac, in a clone of the repository: releases are built there and never in CI.
 #
-# Mac: build/release/Day-VERSION.dmg with Day.app. With the Developer ID set up (see
-# docs/DEVELOPMENT.md) it signs the app and the Sparkle helpers inside it, notarizes and
-# staples both the app and the image, signs the image for Sparkle, and writes the release into
-# site/appcast.xml and Casks/day.rb. Without a Developer ID the image is signed ad hoc and the
-# feed and the cask stay untouched.
+# Mac: build/release/Day-VERSION.dmg with Day.app and its desktop widget. With the Developer
+# ID set up (see docs/DEVELOPMENT.md) it signs the app, the widget and the Sparkle helpers
+# inside it, notarizes and staples both the app and the image, signs the image for Sparkle,
+# and writes the release into site/appcast.xml and Casks/day.rb. Without a Developer ID the
+# image is signed ad hoc and the feed and the cask stay untouched.
 # iPhone: an archive of the app with its widget, exported for App Store Connect. Without an
 # App Store Connect key it stops at an unsigned archive, which still proves that it builds.
 # Version numbers: VERSION is the marketing version on both platforms, and the commit count
@@ -244,12 +244,15 @@ buildMac() {
     done
   fi
   codesign --verify --deep --strict $app
-  # Notarization rejects an app that carries the debugger entitlement; project.yml keeps
-  # it out of Release, and this keeps a change there from reaching a release unnoticed.
-  local entitlements
-  entitlements=$(codesign -d --entitlements - $app 2>&1 || true)
-  [[ $entitlements != *get-task-allow* ]] ||
-    die "$app carries the get-task-allow entitlement; a release cannot be notarized."
+  # Notarization rejects an app, or any code inside it such as the desktop widget, that
+  # carries the debugger entitlement; project.yml keeps it out of Release, and this keeps a
+  # change there from reaching a release unnoticed.
+  local entitlements signed
+  for signed in $app $app/Contents/PlugIns/*.appex(N); do
+    entitlements=$(codesign -d --entitlements - $signed 2>&1 || true)
+    [[ $entitlements != *get-task-allow* ]] ||
+      die "$signed carries the get-task-allow entitlement; a release cannot be notarized."
+  done
 
   local stage=$out/stage
   mkdir -p $stage

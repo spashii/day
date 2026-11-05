@@ -171,16 +171,25 @@ final class Shots {
         return CalendarSymbols(chosen)
     }
 
+    /// The small fixed window the app opens before any account exists, and again when every
+    /// account is signed out. The signed-out list is a grouped `Form`, which this renderer
+    /// draws blank inside a titled window, so that one is drawn without the title bar.
     private func firstRun(_ look: Look) async {
-        let store = Self.store(at: "12:10", state: .noAccount)
-        let state = MacState(store: store)
-        let window = host(
-            MainWindow(state: state, login: OpenAtLogin()).calendarStore(store),
-            size: CGSize(width: 720, height: 480), look: look, chrome: true)
-        window.title = "Day"
-        await settle(1.5)
-        await save(window, as: "first-run-\(look)", "First run, with Open at login under it (\(look))")
-        close(window)
+        let shots: [(FixtureStore.State, String, String, Bool)] = [
+            (.noAccount, "first-run", "First run: 420 by 360, fixed, with Open at login under the note", true),
+            (.allSignedOut, "first-run-signed-out", "Every account signed out: the small window again, Sign In Again… beside each, drawn without its title bar", false),
+        ]
+        for (fixtureState, name, caption, chrome) in shots {
+            let store = Self.store(at: "12:10", state: fixtureState)
+            let state = MacState(store: store)
+            let window = host(
+                MainWindow(state: state, login: OpenAtLogin()).calendarStore(store),
+                size: FirstRunWindow.size, look: look, chrome: chrome)
+            window.title = "Day"
+            await settle(1.5)
+            await save(window, as: "\(name)-\(look)", "\(caption) (\(look))")
+            close(window)
+        }
     }
 
     // MARK: Menu bar

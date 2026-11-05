@@ -36,16 +36,16 @@ An unverified app shows Google's warning screen once per account and is capped a
 
 ## Where Day keeps its data
 
-Each account's Google sign-in is a keychain item under the service `io.github.spashii.day.google` (`DayIdentifiers.keychainService`). Events are plain files in the app's own folder: `~/Library/Application Support/Day` on the Mac, and the App Group container on the iPhone, where the widget reads the snapshot the app writes. If Day was deleted before its accounts were removed, search Keychain Access for the service name and delete the items. [ARCHITECTURE.md](ARCHITECTURE.md) has the rest.
+Each account's Google sign-in is a keychain item under the service `io.github.spashii.day.google` (`DayIdentifiers.keychainService`). Events are plain files in the app's own folder: `~/Library/Application Support/Day` on the Mac, and the App Group container on the iPhone, where the widget reads the snapshot the app writes. The Mac app copies that snapshot into its own App Group, `JMCP69LCSU.io.github.spashii.day`, for the desktop widget. If Day was deleted before its accounts were removed, search Keychain Access for the service name and delete the items. [ARCHITECTURE.md](ARCHITECTURE.md) has the rest.
 
 ## Tests
 
 ```sh
 tools/test.sh                          # swift test in Core, on the Mac
-cd Core && swift test --filter SummaryTests
+cd Core && swift test --filter MenuBarLabelTests
 ```
 
-The tests are in `Core/Tests/DayCoreTests`: golden tests for every table and example in the rules (the summary, the Lock Screen widget, the month marks, the day rows), merging across accounts, civil dates, midnight crossings, daylight saving, and decoding of recorded Google responses. Every person, address and account in them is invented.
+The tests are in `Core/Tests/DayCoreTests`: golden tests for every table and example in the rules (the Lock Screen widget, the menu bar label, the month marks, the day rows), merging across accounts, civil dates, midnight crossings, daylight saving, and decoding of recorded Google responses. Every person, address and account in them is invented.
 
 `day-cli` prints a fixture's days through the same rules, so the text can be read without a simulator: `cd Core && swift run day-cli`.
 
@@ -81,7 +81,7 @@ Day goes out exactly as [Blend](https://github.com/spashii/blend) does: a Develo
 - the notarytool profile `blend-notary`;
 - Sparkle's tools in `~/.blend-signing/sparkle-2.10.1` and the update signing key in `~/.blend-signing/sparkle-private-key`. Its public half is `SUPublicEDKey` in `app/project.yml`. Losing the key means installed copies can never take another update.
 
-With those in place, `tools/release.sh --mac` signs the app and the Sparkle helpers inside it, notarizes and staples the app and the image, signs the image for Sparkle, and writes the release into `site/appcast.xml` and `Casks/day.rb` for you to read. `DAY_SIGN_ID` and `DAY_NOTARY_PROFILE` use an identity and profile from the login keychain instead.
+With those in place, `tools/release.sh --mac` signs the app, its desktop widget and the Sparkle helpers inside it, notarizes and staples the app and the image, signs the image for Sparkle, and writes the release into `site/appcast.xml` and `Casks/day.rb` for you to read. `DAY_SIGN_ID` and `DAY_NOTARY_PROFILE` use an identity and profile from the login keychain instead.
 
 ### iPhone
 

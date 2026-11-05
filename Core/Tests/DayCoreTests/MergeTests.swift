@@ -144,13 +144,16 @@ struct MergeTests {
     }
 
     @Test func aMergedMeetingNeverOverlapsItself() throws {
+        // On the Lock Screen a meeting held on both accounts would read `Also 14:00 Investor
+        // call` under itself.
         let fixture = try TestData.loadFixture()
-        let day = TestData.day("2026-11-04")
-        let now = TestData.wednesday("07:50")
-        let unmerged = summarize(day: day, events: fixture.events, now: now, calendar: fixture.calendar)
-        #expect(unmerged.second?.contains("Investor call and Investor call") == true)
-        let good = summarize(day: day, events: merged(fixture.events), now: now, calendar: fixture.calendar)
-        #expect(good.second?.contains("Investor call and Investor call") != true)
-        #expect(good.second == "Investor call and Acme sync overlap at 14:30.")
+        func line(_ events: [Event]) -> String? {
+            widgetTimeline(
+                events: events, now: TestData.wednesday("13:50"), fetchedAt: TestData.wednesday("13:50"),
+                signedOutAccounts: 0, calendar: fixture.calendar
+            )[0].rectangular.after
+        }
+        #expect(line(fixture.events) == "Also 14:00 Investor call")
+        #expect(line(merged(fixture.events)) == "Also 14:30 Acme sync")
     }
 }

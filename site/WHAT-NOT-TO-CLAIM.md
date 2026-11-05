@@ -17,7 +17,7 @@ Every sentence on the site, in the README and in the App Store listing (`fastlan
 - Not Apple Calendar, iCloud, Outlook or any calendar that is not Google's.
 - Not "widgets" without saying which: the Lock Screen only. No Home Screen, StandBy, Mac desktop or Month widget. The Mac has a menu bar item.
 - Not iPad, Apple Watch, Android or Windows.
-- Not "AI", "smart" or "insights". The summary is fixed rules over event fields, with no language model. Say "written from your events by fixed rules".
+- Not "AI", "smart" or "insights". Every line Day writes comes from fixed rules over event fields, with no language model.
 - Not "join any call". Join covers links from Meet, Zoom, Teams, Webex and Whereby, and the video link Google attaches to an event.
 - Not "every one-off event is named in the month". Recurring events are dots, and short one-off calls with colleagues are dots too (a single branch in `monthMark`; it goes if that choice is reversed).
 - Not "all time zones handled" or a world clock. Times show in the device's zone, with one extra line when an event was written in a zone with a different offset.
@@ -33,8 +33,8 @@ Every sentence on the site, in the README and in the App Store listing (`fastlan
 
 ## About privacy
 
-- Say the line exactly: "Day reads your calendars from Google and keeps them on this device. It collects nothing." On the Mac add "It also checks for updates." as its own sentence after "It collects nothing.", with no other words in it.
-- Not "nothing leaves your device". Calendars go between the device and Google, and the Mac checks a release list on GitHub Pages.
+- Say the lines exactly. Mac: "Day reads your calendars from Google and keeps them on this device. Day itself collects nothing. It also checks for updates through apps.idea2prod.in, which counts checks and downloads by app, version and country and never stores your IP address." iPhone: the same without its last sentence.
+- Not "nothing leaves your device". Calendars go between the device and Google, and the Mac checks for updates through apps.idea2prod.in.
 - Not "secure", "encrypted", "private by design" or "bank-level". The sign-in is in the keychain and the events are plain files in the app's own container. Say that, or say nothing.
 - Not "deletes everything when you remove an account" until `AppModel.removeAccount` is checked to delete both the keychain item and the cached files. The privacy page says it does.
 - The privacy page says the widget reads the same saved events and sign-in. If the widget starts fetching from Google by itself, the sentence is still true; add that it does, and keep the Limited Use line.

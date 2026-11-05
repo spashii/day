@@ -5,7 +5,6 @@ All your Google calendars as one, on Mac and iPhone. Read-only; edits open in Go
 Day shows the calendars Google lists for each of your accounts as one, read-only. It answers three questions faster than Google Calendar does: what is next, what does today look like, and what big thing is coming. Everything else is one tap away in Google Calendar, which is why Day has no plus button.
 
 - **The next event on the Lock Screen.** A widget in three sizes, above or below the clock, with the next event from every calendar. After the last event of the day it shows tomorrow's first one.
-- **Today in two sentences.** "Four to go, done at 17:00. Investor call and Acme sync overlap at 14:30." Written from your events by fixed rules, with no language model.
 - **The month's big events by name.** Multi-day events are bars, one-offs that matter get a colored rule and a title, and recurring events are gray dots.
 - **A menu bar item on the Mac.** The next event in the menu bar, and today in a panel, with Join on the current or next meeting.
 
@@ -14,7 +13,7 @@ Day shows the calendars Google lists for each of your accounts as one, read-only
 - Several Google accounts at once, merged into one view. A calendar shared between accounts appears once, and an event on two calendars appears once.
 - The calendars you see are the ones Google shows by default; a toggle per calendar hides the rest in Day without touching Google.
 - Colors are Google's, mapped to the nearest system color, so light, dark and Increase Contrast come from the system.
-- Day view with a two-sentence summary, all-day events, an Earlier row that folds away what has ended, a red line for now, and gaps of an hour or more.
+- Day view with all-day events, an Earlier row that folds away what has ended, a red line for now, and gaps of an hour or more.
 - Event sheet on iPhone and popover on Mac: time (with the zone it was written in, when that differs from yours), repeats, a Join button for Meet, Zoom, Teams, Webex and Whereby links, place, guest count and your answer, the calendar, the description, and Open in Google Calendar.
 - Cached events show immediately and refresh quietly. When Google cannot be reached, a line says how old the events are. When Google signs an account out, a line says so, with Sign In Again.
 - Light and dark follow the system.
@@ -30,7 +29,7 @@ Not in Day: editing or creating events, replying to invitations, notifications, 
 
 ## Install
 
-**Mac.** Download the disk image from the [latest release](../../releases/latest), open it, and drag Day to Applications. Or install it with Homebrew:
+**Mac.** Download the disk image from the [latest release](https://apps.idea2prod.in/day/download), open it, and drag Day to Applications. Or install it with Homebrew:
 
 ```sh
 brew tap spashii/day https://github.com/spashii/day
@@ -55,7 +54,11 @@ On the Mac, the keyboard follows Apple Calendar: Command-T for today, Shift-Comm
 
 ## Privacy
 
-Day reads your calendars from Google and keeps them on this device. It collects nothing. It has no analytics and no accounts of its own, and the Mac app also checks for updates, with [Sparkle](https://sparkle-project.org), by fetching a list of releases from GitHub Pages. Day asks Google for read-only access to your calendars and for your email address. The sign-in is kept in the keychain, and your events are stored in the app's own folder: `~/Library/Application Support/Day` on the Mac. The full text is in [site/privacy.html](site/privacy.html).
+**Mac.** Day reads your calendars from Google and keeps them on this device. Day itself collects nothing. It also checks for updates through apps.idea2prod.in, which counts checks and downloads by app, version and country and never stores your IP address.
+
+**iPhone.** Day reads your calendars from Google and keeps them on this device. Day itself collects nothing.
+
+It has no analytics and no accounts of its own. Day asks Google for read-only access to your calendars and for your email address. The sign-in is kept in the keychain, and your events are stored in the app's own folder: `~/Library/Application Support/Day` on the Mac. The full text is in [site/privacy.html](https://apps.idea2prod.in/day/privacy.html).
 
 ## Uninstall
 
@@ -70,7 +73,7 @@ Remove your accounts in Day before deleting it, so their sign-ins leave the keyc
 
 ## How it works
 
-Day signs in to Google with read-only access and keeps your events on the device. One Swift package holds every rule that turns events into marks, rows and sentences, so the Mac app, the iPhone app and the Lock Screen widget always agree. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) has the details.
+Day signs in to Google with read-only access and keeps your events on the device. One Swift package holds every rule that turns events into marks and rows, so the Mac app, the iPhone app and the Lock Screen widget always agree. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) has the details.
 
 ## License
 

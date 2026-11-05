@@ -1,6 +1,6 @@
 #!/bin/zsh
 # Pictures of every screen the brief lists, all on the invented fixture:
-#   tools/screenshots.sh [NAME] [iphone] [access] [lock] [widget] [mac] [icon]
+#   tools/screenshots.sh [NAME] [iphone] [access] [lock] [widget] [mac] [macwidget] [icon]
 #
 # From Linux it syncs the checkout to ~/build/NAME on the Mac (tools/sync.sh, NAME defaults
 # to "day"), runs itself there, and copies the pictures with their index.html into
@@ -21,6 +21,10 @@
 #   by tools/shots into windows placed off every screen, so nothing appears on the desktop.
 #   Glass is drawn by the window server and is missing from these pictures; the day pane
 #   inside it is drawn again on a flat ground.
+# - macwidget: the desktop widget "Today" in its three families, drawn by its own views in
+#   tools/shots without a window, at six times of the invented Wednesday and in each state,
+#   with timeline.txt beside them. The desktop's dimmed and accented styles are composited by
+#   the system; pictures without color stand in for them.
 # - icon: the app icon in its six appearances, rendered by Icon Composer's ictool.
 #
 # Nothing here signs with a real identity, uploads or touches Google.
@@ -28,11 +32,11 @@ set -euo pipefail
 trap 'print -u2 "screenshots.sh: stopped at line $LINENO"' ZERR
 root=${0:A:h:h}
 name=day
-if [[ ${1:-} != (iphone|access|lock|widget|mac|icon) && -n ${1:-} ]]; then
+if [[ ${1:-} != (iphone|access|lock|widget|mac|macwidget|icon) && -n ${1:-} ]]; then
   name=$1
   shift
 fi
-parts=(iphone access lock widget mac icon)
+parts=(iphone access lock widget mac macwidget icon)
 (( $# )) && parts=("$@")
 
 if [[ $(uname) != Darwin ]]; then
@@ -67,7 +71,7 @@ record() {
 
 build() {
   (cd app && xcodegen generate --quiet)
-  if (( ${parts[(I)widget]} || ${parts[(I)mac]} )); then
+  if (( ${parts[(I)widget]} || ${parts[(I)mac]} || ${parts[(I)macwidget]} )); then
     (cd tools/shots && xcodegen generate --quiet)
   fi
   if (( ${parts[(I)iphone]} || ${parts[(I)access]} || ${parts[(I)lock]} )); then
@@ -82,6 +86,10 @@ build() {
   fi
   if (( ${parts[(I)mac]} )); then
     xcodebuild -project tools/shots/Shots.xcodeproj -scheme DayMacShots -configuration Debug \
+      -destination "platform=macOS,arch=arm64" -derivedDataPath $dd -quiet build
+  fi
+  if (( ${parts[(I)macwidget]} )); then
+    xcodebuild -project tools/shots/Shots.xcodeproj -scheme DayMacWidgetShots -configuration Debug \
       -destination "platform=macOS,arch=arm64" -derivedDataPath $dd -quiet build
   fi
 }
@@ -199,11 +207,11 @@ iphone_pass() {
   snap $p-day-1355-join.png "Day at 13:55: Join on Investor call, 5 minutes before ($look)"
 
   launch 12:10 offline
-  snap $p-state-offline.png "Offline line under the summary ($look)"
+  snap $p-state-offline.png "Offline line above the events ($look)"
   launch 12:10 unreachable
-  snap $p-state-unreachable.png "Google unreachable line under the summary ($look)"
+  snap $p-state-unreachable.png "Google unreachable line above the events ($look)"
   launch 12:10 signedOut
-  snap $p-state-signed-out.png "One account signed out: its events stay, line under the summary ($look)"
+  snap $p-state-signed-out.png "One account signed out: its events stay, line above them ($look)"
   launch 12:10 loading
   snap $p-state-loading.png "First fetch with nothing cached: Loading… ($look)"
   launch 12:10 noCalendars
@@ -248,7 +256,7 @@ access() {
   xcrun simctl ui $sim appearance light
   xcrun simctl ui $sim content_size accessibility-extra-extra-extra-large
   launch 12:10
-  snap $p-ax5-day.png "Day at the largest accessibility text size: the summary first (light)"
+  snap $p-ax5-day.png "Day at the largest accessibility text size: the events first (light)"
   scroll_up
   snap $p-ax5-day-rows.png "Day at the largest accessibility text size, scrolled to the rows: times above titles, titles wrap. The large title does not collapse, so rows pass under it (light)"
   launch 12:10
@@ -421,6 +429,24 @@ mac() {
   done < $shots/mac/done.txt
 }
 
+# The desktop widget's families. The renderer draws without a window or a run loop and quits.
+macwidget() {
+  local app=$dd/Build/Products/Debug/DayMacWidgetShots.app
+  rm -rf $shots/macwidget
+  mkdir -p $shots/macwidget
+  $app/Contents/MacOS/DayMacWidgetShots -ShotsTo $shots/macwidget > $root/build/macwidget-shots.log 2>&1 &
+  local pid=$!
+  for _ in {1..120}; do
+    kill -0 $pid 2>/dev/null || break
+    sleep 1
+  done
+  kill $pid 2>/dev/null || true
+  [[ -s $shots/macwidget/done.txt ]] || { print -u2 "desktop widget views did not finish"; return 1 }
+  while IFS=$'\t' read -r file caption; do
+    record macwidget macwidget/$file $caption
+  done < $shots/macwidget/done.txt
+}
+
 # MARK: Icon
 
 icon() {
@@ -473,6 +499,11 @@ index() {
     print "<p>Built $(date '+%Y-%m-%d %H:%M') from the working tree. iPhone 17 simulator, iOS 27.2; Mac app views from tools/shots. All events, people and accounts are invented.</p>"
     # What changed this round leads, light beside dark; the sections below hold the rest.
     local -a lead=(
+      mac/first-run-light.png mac/first-run-dark.png
+      macwidget/today-1140-light.png macwidget/today-1140-dark.png
+      macwidget/today-1730-light.png macwidget/busy-1210-light.png macwidget/today-1140-dimmed.png
+      mac/label-1210-light.png mac/label-1348-light.png mac/label-1412-light.png mac/label-1730-light.png
+      iphone-light-day-1210.png iphone-light-state-offline.png
       iphone-light-month.png iphone-dark-month.png
       iphone-light-month-selected.png iphone-dark-month-selected.png
       iphone-light-month-december.png iphone-dark-month-december.png
@@ -490,14 +521,15 @@ index() {
       iphone-light-contrast-month.png iphone-dark-contrast-month.png iphone-light-contrast-day-1355.png
       icon/Default.png icon/Dark.png icon/ClearLight.png icon/ClearDark.png icon/TintedLight.png icon/TintedDark.png
     )
-    print "<h2>New this round</h2><p>The month as one page per month with the selected day under it, calendar symbols, the system title bar and Go to Date button, the larger-text layout, and the icon with Liquid Glass on.</p><div class=\"grid\">"
+    print "<h2>New this round</h2><p>The Mac's small first-run window, the desktop widget in its three families, the menu bar label as the time alone, and the Day starting with its events. Below them, the previous round's month pages, calendar symbols and larger-text layout.</p><div class=\"grid\">"
     local file line caption
     for file in $lead; do
-      line=$(grep -F "	$file	" $manifest | head -1)
+      # A part that has not run yet has no line; its pictures are left out.
+      line=$(grep -F "	$file	" $manifest | head -1 || true)
       [[ -n $line ]] || continue
       caption=${line##*	}
       local leadClass=
-      [[ $file == (mac|widget)/* ]] && leadClass=' class="wide"'
+      [[ $file == (mac|macwidget|widget)/* ]] && leadClass=' class="wide"'
       print "<figure$leadClass><a href=\"$file\"><img src=\"$file\" alt=\"${caption//\"/&quot;}\" loading=\"lazy\"></a><figcaption>$caption</figcaption></figure>"
     done
     print '</div>'
@@ -506,6 +538,7 @@ index() {
       lock "Lock Screen, through the widget gallery"
       widget "Lock Screen widget views, the golden table and every state"
       mac "Mac"
+      macwidget "Mac desktop widget"
       icon "App icon"
     )
     local -A notes=(
@@ -513,16 +546,17 @@ index() {
       lock "Added through the Lock Screen editor's own gallery and drawn by the system in its vibrant mode. The widget reads the real clock and the bundled invented week, moved so its Wednesday is today, in Amsterdam time; the clock above it is the Mac's own zone. Always-On is the dimmed state the side button leaves the simulator in."
       widget "Drawn by the widget's own views (NextViews.swift) from widgetTimeline, at the six times of the brief's table and in each state, on a dark ground. Only the Lock Screen draws the vibrant rendering, so these are the text and layout, not the final pixels."
       mac "Drawn by the app's own views in tools/shots, in windows placed off every screen. Glass (the inspector's floating pane, the menu bar panel's material) is drawn by the window server and does not appear here; a capture of the real window needs an unlocked session."
+      macwidget "Drawn by the desktop widget's own views (app/MacWidget) from TodayProvider, small, medium and large side by side on the widget background. The desktop's dimmed and accented styles are drawn by the system; the pictures without color stand in for them. timeline.txt lists the entries."
       icon "Rendered from app/AppIcon.icon by Icon Composer's ictool, iOS, in each appearance the system can ask for."
     )
-    for part in iphone lock widget mac icon; do
+    for part in iphone lock widget mac macwidget icon; do
       # A part whose pictures all lead has no section of its own.
-      local -a rest=(${(f)"$(grep "^$part	" $manifest 2>/dev/null | cut -f2)"})
+      local -a rest=(${(f)"$(grep "^$part	" $manifest 2>/dev/null | cut -f2 || true)"})
       rest=(${rest:|lead})
       (( $#rest )) || continue
       print "<h2>$titles[$part]</h2><p>$notes[$part]</p><div class=\"grid\">"
       local class=
-      [[ $part == (mac|widget) ]] && class=' class="wide"'
+      [[ $part == (mac|macwidget|widget) ]] && class=' class="wide"'
       grep "^$part	" $manifest | while IFS=$'\t' read -r _ file caption; do
         (( ${lead[(Ie)$file]} )) && continue
         print "<figure$class><a href=\"$file\"><img src=\"$file\" alt=\"${caption//\"/&quot;}\" loading=\"lazy\"></a><figcaption>$caption</figcaption></figure>"

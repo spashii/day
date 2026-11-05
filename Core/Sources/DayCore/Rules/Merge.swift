@@ -1,7 +1,7 @@
 import Foundation
 
-/// Folds the same event arriving from several calendars or accounts into one, so the summary
-/// never reports a meeting overlapping itself.
+/// Folds the same event arriving from several calendars or accounts into one, so a meeting
+/// never appears twice, or overlaps itself on the Lock Screen.
 ///
 /// Events sharing `iCalUID` and `originalStart` (or start, for single events) are one event.
 /// The kept copy is the one the account holder organizes, then the one they answered, then

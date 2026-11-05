@@ -1,13 +1,13 @@
 import DayCore
 import SwiftUI
 
-/// Today for the menu bar panel: the same summary, status lines and row views as `DayList`,
-/// stacked in a scroll view instead of laid out in a `List`.
+/// Today for the menu bar panel: the same state lines and row views as `DayList`, stacked in
+/// a scroll view instead of laid out in a `List`.
 ///
 /// A `List` has no height of its own, so inside a panel that sizes itself to its content it
-/// needs a guess, and a three-line summary or a wrapped signed-out line is always taller than
-/// the guess. Stacked rows have a real height: the panel is exactly as tall as the day, up to
-/// 480 pt, and only a longer day scrolls.
+/// needs a guess, and a wrapped signed-out line is always taller than the guess. Stacked rows
+/// have a real height: the panel is exactly as tall as the day, up to 480 pt, and only a
+/// longer day scrolls.
 ///
 /// The rows are the shared ones (`EventRowContent`, `JoinButton`, `NowLineRow`, `GapRow`,
 /// `EarlierRow`, `AllDayRowContent`), so a row reads the same here as in the day pane. Only the
@@ -31,8 +31,10 @@ struct StackedDayList: View {
             let items = items(rows)
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    DaySummary(day: day)
-                        .padding(.bottom, Spacing.cell)
+                    if DayStateLines.isShown(in: store, isEmpty: items.isEmpty) {
+                        DayStateLines(isEmpty: items.isEmpty)
+                            .padding(.bottom, Spacing.cell)
+                    }
                     ForEach(items) { item in
                         row(item)
                         if separated(item, in: items) {

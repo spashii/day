@@ -56,13 +56,15 @@ enum NextPreviewData {
     }
 
     /// Every state the brief names: no account, nothing ahead, an account signed out, data
-    /// over 2 hours old (`As of`) and over 24 hours old (`Open to update`).
+    /// over 2 hours old (`As of 9:10`), data from yesterday (`As of Tue 23:10`) and over 24
+    /// hours old (`Open to update`).
     static var states: [NextEntry] {
         [
             NextEntry(content: noAccountWidgetEntry(now: time("12:10"), calendar: calendar)),
             entry(at: "12:10", events: []),
             entry(at: "12:10", signedOut: 1),
             entry(at: "12:10", age: 3 * 3600),
+            entry(at: "12:10", age: 13 * 3600),
             entry(at: "12:10", age: 25 * 3600),
         ]
     }

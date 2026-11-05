@@ -11,7 +11,7 @@ struct AccountsView: View {
     @EnvironmentSymbols private var symbols
     @Environment(\.webAuthenticationSession) private var session
 
-    /// `Add Google Account…`, or `Add Another Account…` in the first-run flow.
+    /// `Add Google Account…`, or `Add Another Account…` in the iPhone's first-run flow.
     var addTitle: LocalizedStringKey = "Add Google Account…"
 
     @State private var removing: Account?
@@ -95,9 +95,9 @@ struct AccountsView: View {
 
     private var privacy: LocalizedStringKey {
         #if os(macOS)
-            "Day reads your calendars from Google and keeps them on this device. It collects nothing. It also checks for updates."
+            "Day reads your calendars from Google and keeps them on this device. Day itself collects nothing. It also checks for updates through apps.idea2prod.in, which counts checks and downloads by app, version and country and never stores your IP address."
         #else
-            "Day reads your calendars from Google and keeps them on this device. It collects nothing."
+            "Day reads your calendars from Google and keeps them on this device. Day itself collects nothing."
         #endif
     }
 

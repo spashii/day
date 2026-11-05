@@ -12,8 +12,14 @@
     /// - `-SnapshotScript "step; step"` runs steps once the window is up, one per second:
     ///   `today`, `date:2026-11-12`, `day:+1`, `week:+1`, `month:+1`, `pane:hide`, `pane:show`,
     ///   `event:next`, `event:prev`, `event:show`, `gotodate`,
-    ///   `settings`, `settings:general`, `panel`, `snap:<name>` (copies the windows to
-    ///   `<name>-<title>.png`) and `quit`.
+    ///   `settings`, `settings:general`, `panel`, `addaccount` (the fixture's next account,
+    ///   as if Google's sheet had finished), `close` (closes the main window),
+    ///   `open:day://day/2026-11-12` (the URL through Launch Services, as a widget click),
+    ///   `dump:<name>` (windows and menus to
+    ///   `dump-<name>.txt`), `snap:<name>` (copies the windows to `<name>-<title>.png`) and
+    ///   `quit`.
+    /// - `-SnapshotHidden YES` keeps the app out of sight while it draws: no Dock icon and
+    ///   windows with no opacity, so a run beside the Day in use shows nothing on its screen.
     @MainActor
     enum DebugSnapshot {
         private static var timer: Timer?
@@ -26,6 +32,16 @@
             // A window nobody can see lets the app nap, which would stop the timer.
             activity = ProcessInfo.processInfo.beginActivity(
                 options: .userInitiated, reason: "Writing window snapshots")
+            if UserDefaults.standard.bool(forKey: "SnapshotHidden") {
+                NSApp.setActivationPolicy(.accessory)
+                NotificationCenter.default.addObserver(
+                    forName: NSWindow.didUpdateNotification, object: nil, queue: .main
+                ) { _ in
+                    MainActor.assumeIsolated {
+                        for window in NSApp.windows { window.alphaValue = 0 }
+                    }
+                }
+            }
             let timer = Timer(timeInterval: 0.5, repeats: true) { _ in
                 MainActor.assumeIsolated { write(to: url, prefix: nil) }
             }
@@ -65,6 +81,7 @@
                 default: state.showEvent()
                 }
             case "gotodate": state.showsGoToDate = true
+            case "addaccount": (MacLaunch.shared.store as? FixtureStore)?.addNextAccount()
             case "settings":
                 state.settingsTab = argument == "general" ? .general : .accounts
                 NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
@@ -83,11 +100,19 @@
                     text += "menu \(item.title) hidden=\(item.isHidden): \(entries.joined(separator: " | "))\n"
                 }
                 for window in NSApp.windows {
-                    text += "\(type(of: window)) \"\(window.title)\" visible=\(window.isVisible) frame=\(window.frame) min=\(window.minSize) screen=\(window.screen?.visibleFrame ?? .zero)\n"
+                    text += "\(type(of: window)) \"\(window.title)\" visible=\(window.isVisible) frame=\(window.frame) min=\(window.minSize) max=\(window.maxSize) resizable=\(window.styleMask.contains(.resizable)) zoomable=\(window.standardWindowButton(.zoomButton)?.isEnabled ?? false) screen=\(window.screen?.visibleFrame ?? .zero)\n"
                 }
                 try? text.write(to: folder.appending(path: "dump-\(argument ?? "x").txt"), atomically: true, encoding: .utf8)
             case "close":
                 for window in NSApp.windows where window.title.contains("2026") { window.close() }
+            case "open":
+                // Through Launch Services to this copy of the app, the way a click on the
+                // desktop widget arrives, so the URL handling runs as it does for real.
+                if let url = argument.flatMap({ URL(string: $0) }) {
+                    NSWorkspace.shared.open(
+                        [url], withApplicationAt: Bundle.main.bundleURL,
+                        configuration: NSWorkspace.OpenConfiguration())
+                }
             case "quit": NSApp.terminate(nil)
             default: break
             }

@@ -9,8 +9,8 @@ import Foundation
 /// - Earlier (today only): everything that has ended, folded into one row.
 /// - Now line: before the first event still to come, when none is in progress. Never through
 ///   an event in progress, and not after the last event.
-/// - Gap rows: a gap of 60 minutes or more between events, the same threshold and events as
-///   the summary's free block. The gap that holds now reads `Free until 16:00`.
+/// - Gap rows: a gap of 60 minutes or more between events. The gap that holds now reads
+///   `Free until 16:00`.
 /// - Rows: declined and cancelled events do not appear.
 public func dayRows(day: CivilDate, events: [Event], now: Date, calendar: Calendar) -> [DayRow] {
     var rows: [DayRow] = []

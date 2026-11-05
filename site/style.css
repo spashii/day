@@ -33,8 +33,6 @@ h1 { font-size: 56px; line-height: 1.05; letter-spacing: -.035em; font-weight: 7
 .day .back { color: var(--accent); }
 .day .weekday { margin-top: 8px; font-size: 34px; line-height: 1.15; font-weight: 700; letter-spacing: -.02em; }
 .day .date { color: var(--muted); }
-.day .summary { margin-top: 16px; font-size: 20px; line-height: 1.3; }
-.day .summary span { color: var(--muted); }
 .day .note { margin-top: 16px; color: var(--muted); }
 .day .note + .note { margin-top: 4px; }
 .day .now { display: grid; grid-template-columns: 44px 1fr; gap: 8px; align-items: center; margin: 12px 0 4px; color: var(--red); font-variant-numeric: tabular-nums; }
@@ -49,7 +47,7 @@ h1 { font-size: 56px; line-height: 1.05; letter-spacing: -.035em; font-weight: 7
 .day .row small { display: block; color: var(--muted); font-size: 15px; }
 .day .gap { padding: 8px 0 8px 54px; border-top: 1px solid var(--line); color: var(--muted); }
 
-.points { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding-bottom: 72px; }
+.points { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; padding-bottom: 72px; }
 .point { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 24px; }
 .point h2 { font-size: 17px; letter-spacing: -.01em; }
 .point p { margin-top: 6px; color: var(--muted); font-size: 15px; }

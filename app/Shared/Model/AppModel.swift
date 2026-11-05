@@ -217,8 +217,18 @@ final class AppModel: CalendarStore {
             : await engine.refresh()
         if !Task.isCancelled { outcome = report.outcome }
         apply(report.data, startedAt: mark)
+        let accounts = report.data.accounts
+        Self.refreshLog.notice(
+            "refresh \(String(describing: report.outcome), privacy: .public): \(accounts.count, privacy: .public) accounts, \(accounts.filter(\.signedOut).count, privacy: .public) signed out"
+        )
         return report
     }
+
+    /// One line per refresh in the log (subsystem `io.github.spashii.day`, category
+    /// `refresh`): whether Google answered and how many accounts are signed out, with no
+    /// addresses or events, so a bug report or a check after an update can tell that Day is
+    /// still signed in and current without opening it.
+    private static let refreshLog = Logger(subsystem: DayIdentifiers.bundleID, category: "refresh")
 
     /// The app came to the front, including at launch: refresh the clock at once and the
     /// data unless it was tried within the last minute. A last try stamped in the future
@@ -405,8 +415,8 @@ final class AppModel: CalendarStore {
 
     /// The sign-in with the browser step passed in, so everything around it can run without
     /// a window. Closing the sheet or choosing Cancel on Google's screen throws
-    /// `CancellationError`; every other failure throws an error whose description reads
-    /// after `Couldn't sign in to Google: `.
+    /// `CancellationError`; every other failure throws an error whose description is the
+    /// line to show, in plain words (`SignInFailure`).
     func signIn(
         loginHint: String?, repairing: Account?,
         authenticate: @MainActor (AuthorizationRequest) async throws -> URL
@@ -532,13 +542,17 @@ final class AppModel: CalendarStore {
     /// it shows, or in the age its lines are timed from. Nothing on disk means nothing for the
     /// widget to read either.
     private func reloadWidgetsIfNeeded(_ snapshot: WidgetSnapshot?) {
+        #if os(macOS)
+            WidgetSnapshotWriter.publish(snapshot)
+        #endif
         guard let snapshot, snapshot.needsReload(after: reloadedFor) else { return }
         reloadedFor = snapshot
         reloadWidgets()
     }
 
-    /// Asks WidgetKit to rebuild the Lock Screen timelines from the snapshot. The Mac has no
-    /// widget.
+    /// Asks WidgetKit to rebuild the Lock Screen timelines from the snapshot. On the Mac the
+    /// desktop widget reads its own copy in the App Group, and `WidgetSnapshotWriter` asks for
+    /// its reload when it writes that copy.
     static func reloadSystemWidgets() {
         #if os(iOS)
             WidgetCenter.shared.reloadAllTimelines()
@@ -599,23 +613,28 @@ extension AppModel {
 
 // MARK: - Sign-in failures
 
-/// A sign-in that failed, worded for the line the screen shows after
-/// `Couldn't sign in to Google: `. The raw errors from Core read as `OAuthError error 3`, and
-/// Google's codes and HTTP statuses mean nothing to the person reading the line, so they go to
-/// the log and the line says what happened in plain words.
+/// A sign-in that failed, with the whole line the screen shows. The raw errors from Core read
+/// as `OAuthError error 3`, and Google's codes, HTTP statuses and tokens mean nothing to the
+/// person reading the line, so they go to the log (`Console.app`, subsystem
+/// `io.github.spashii.day`, category `sign-in`) and the line says what happened in plain
+/// words. Nothing shown here names a status, a code, a token, OAuth or an API.
 struct SignInFailure: LocalizedError, Equatable {
-    let reason: String
+    let line: String
 
-    var errorDescription: String? { reason }
+    var errorDescription: String? { line }
 
     /// Where the codes go that the line does not show.
     private static let log = Logger(subsystem: DayIdentifiers.bundleID, category: "sign-in")
 
-    /// What the person reads when Google ended the sign-in without a usable answer.
-    private static let unfinished = "Google did not finish the sign-in."
+    /// What the person reads when Google ended the sign-in without a usable answer, and when
+    /// nothing better is known.
+    static let unfinished = "Google did not finish the sign-in."
+
+    /// What the person reads when the client Day signs in with is missing or refused.
+    private static let noClient = "This copy of Day cannot reach Google."
 
     /// The error to throw for `error`: `CancellationError` when the person backed out,
-    /// otherwise a failure with a sentence that says what happened.
+    /// otherwise a failure whose line says what happened.
     static func describing(_ error: any Error, repairing: Account?) -> any Error {
         switch error {
         case is CancellationError:
@@ -623,37 +642,47 @@ struct SignInFailure: LocalizedError, Equatable {
         case let error as ASWebAuthenticationSessionError where error.code == .canceledLogin:
             return CancellationError()
         case let error as OAuthError:
-            switch error {
-            case .accessDenied:
-                return CancellationError()
-            case .differentAccount(let email):
-                let expected = repairing?.email ?? "the account"
-                return SignInFailure(reason: "you chose \(email) instead of \(expected).")
-            case .authorizationFailed(let code):
-                log.error("Google ended the sign-in with \(code, privacy: .public)")
-                return SignInFailure(reason: unfinished)
-            case .stateMismatch:
-                return SignInFailure(reason: "Google's answer was for another sign-in.")
-            case .invalidGrant:
-                return SignInFailure(reason: "Google refused the sign-in.")
-            case .clientRejected:
-                return SignInFailure(reason: "Google refused this copy of Day.")
-            case .partialGrant:
-                return SignInFailure(reason: "Day needs access to your calendars.")
-            case .tokenEndpoint(let status, let code):
-                log.error(
-                    "Google answered the sign-in with \(status, privacy: .public) \(code ?? "none", privacy: .public)"
-                )
-                return SignInFailure(reason: unfinished)
-            case .malformedResponse(let detail):
-                log.error("Google's sign-in answer was unusable: \(detail, privacy: .public)")
-                return SignInFailure(reason: unfinished)
-            }
+            return oauth(error, repairing: repairing)
         case SyncError.noGoogleClient:
-            return SignInFailure(reason: "this copy of Day cannot reach Google.")
-        default:
-            // The system's own reason, as in `The Internet connection appears to be offline.`
+            log.error("no Google client: GoogleClientID is missing or the placeholder")
+            return SignInFailure(line: noClient)
+        case is KeychainTokenStore.Failure:
+            // Its own description is a plain sentence; the status is in the log already.
             return error
+        case let error as URLError:
+            // The system's own reason, as in `The Internet connection appears to be offline.`
+            return SignInFailure(line: "Couldn't sign in to Google: \(error.localizedDescription)")
+        default:
+            log.error("sign-in failed: \(String(describing: error), privacy: .public)")
+            return SignInFailure(line: unfinished)
         }
+    }
+
+    private static func oauth(_ error: OAuthError, repairing: Account?) -> any Error {
+        switch error {
+        case .accessDenied:
+            return CancellationError()
+        case .differentAccount(let email):
+            let expected = repairing?.email ?? "the account"
+            return SignInFailure(line: "You chose \(email) instead of \(expected).")
+        case .partialGrant:
+            return SignInFailure(line: "Day needs access to your calendars.")
+        case .clientRejected(let code):
+            log.error("Google refused the client: \(code, privacy: .public)")
+            return SignInFailure(line: noClient)
+        case .authorizationFailed(let code):
+            log.error("Google ended the sign-in with \(code, privacy: .public)")
+        case .stateMismatch:
+            log.error("Google's answer was for another sign-in")
+        case .invalidGrant(let subtype):
+            log.error("Google refused the grant: \(subtype ?? "none", privacy: .public)")
+        case .tokenEndpoint(let status, let code):
+            log.error(
+                "Google answered the sign-in with \(status, privacy: .public) \(code ?? "none", privacy: .public)"
+            )
+        case .malformedResponse(let detail):
+            log.error("Google's sign-in answer was unusable: \(detail, privacy: .public)")
+        }
+        return SignInFailure(line: unfinished)
     }
 }

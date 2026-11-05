@@ -16,18 +16,6 @@ public enum MonthMark: String, Codable, Hashable, Sendable, CaseIterable {
     case titled
 }
 
-/// The two sentences above the day. `second` is nil when no rule has anything still ahead
-/// to say that sentence one did not.
-public struct Summary: Codable, Hashable, Sendable {
-    public var first: String
-    public var second: String?
-
-    public init(first: String, second: String? = nil) {
-        self.first = first
-        self.second = second
-    }
-}
-
 /// The one answer to "what is next" that the Lock Screen, the menu bar and the Day's Join
 /// window all share, so no surface disagrees.
 public struct NextEvents: Hashable, Sendable {
@@ -118,7 +106,8 @@ public struct RectangularLines: Hashable, Sendable {
     /// Line 2; nil leaves it empty.
     public var when: WhenLine?
     /// Line 3, secondary: `16:00 Weekly planning`, `Also 14:30 Acme sync`,
-    /// `Last one today`, `As of 9:12`, `1 account signed out`. Dropped under Always-On.
+    /// `Last one today`, `As of 9:12` (`As of Tue 9:12` once the day has changed since the
+    /// data was fetched), `1 account signed out`. Dropped under Always-On.
     public var after: String?
     /// Tap target: `day://event/<account>/<calendar>/<id>` for the event shown.
     public var url: URL?
@@ -161,10 +150,11 @@ public enum CircularContent: Hashable, Sendable {
 
 /// The Mac menu bar item's label.
 public struct MenuBarLabel: Hashable, Sendable {
-    /// Draw the `calendar` symbol before the text.
+    /// Draw the `calendar` symbol before the text. Only the symbol-alone state does: a label
+    /// with an event is text, to leave room beside the notch.
     public var showsSymbol: Bool
-    /// `14:00` (quiet, beside the symbol), `Investor call in 12 min`,
-    /// `Investor call, 18 min left`; nil for the symbol alone.
+    /// `14:00`, `in 12 min`, `18 min left`, each with the event's title when the title is 8
+    /// characters or fewer (`14:00 Standup`); nil for the symbol alone.
     public var text: String?
 
     public init(showsSymbol: Bool, text: String?) {

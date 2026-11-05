@@ -139,14 +139,6 @@ struct FormattingTests {
         #expect(Formatting.monthTitle(year: 2026, month: 11, now: now, calendar: calendar, alwaysYear: true) == "November 2026")
     }
 
-    @Test func outOfOfficeEndIsAWeekdayUnderAWeekAndADateAfter() {
-        let day = TestData.day("2026-11-04")
-        #expect(Formatting.until(TestData.day("2026-11-06"), from: day, calendar: calendar) == "Friday")
-        #expect(Formatting.until(TestData.day("2026-11-10"), from: day, calendar: calendar) == "Tuesday")
-        #expect(Formatting.until(TestData.day("2026-11-11"), from: day, calendar: calendar) == "11 November")
-        #expect(Formatting.until(TestData.day("2026-12-24"), from: day, calendar: calendar) == "24 December")
-    }
-
     // MARK: Event sheet lines
 
     /// The system interval formatter owns the range mark and the digit padding, so these
@@ -208,24 +200,6 @@ struct FormattingTests {
         #expect(TestData.plain(Formatting.eventWhen(instant, calendar: TestData.amsterdam)).contains("09:30"))
     }
 
-    @Test func dayTimeSeenFromADay() {
-        let cal = TestData.amsterdam
-        let day = TestData.day("2026-11-05")
-        func said(_ time: String) -> String {
-            Formatting.dayTime(TestData.date(time), seenFrom: day, calendar: cal)
-        }
-        #expect(said("2026-11-05 09:30") == "9:30")
-        // The day before and after, within a week: the weekday.
-        #expect(said("2026-11-06 00:15") == "Fri 0:15")
-        #expect(said("2026-11-04 22:00") == "Wed 22:00")
-        #expect(said("2026-11-11 09:00") == "Wed 9:00")
-        // A week or more away, where a weekday name would read as the wrong week: the date.
-        #expect(said("2026-11-12 09:00") == "12 Nov 9:00")
-        #expect(said("2026-10-29 09:00") == "29 Oct 9:00")
-        // Never Tomorrow: the form does not depend on today.
-        #expect(!said("2026-11-06 09:00").contains("Tomorrow"))
-    }
-
     @Test func guests() {
         func event(_ response: Response, _ count: Int) -> Event {
             TestData.event("E", "2026-11-04 10:00", "2026-11-04 11:00", response: response, attendees: count)
@@ -271,23 +245,17 @@ struct FormattingTests {
         #expect(Formatting.city(zoneIdentifier: "UTC") == "UTC")
     }
 
-    @Test func truncation() {
-        #expect(Formatting.truncated("Short", to: 16) == "Short")
-        #expect(Formatting.truncated("Sixteen chars ok", to: 16) == "Sixteen chars ok")
-        #expect(Formatting.truncated("Quarterly planning meeting", to: 16) == "Quarterly planni…")
-    }
-
     // MARK: Copy hygiene
 
-    /// What the summary never says: a greeting, an adjective about the day, an exclamation mark.
+    /// What the rules' strings never say: a greeting, an adjective about the day, an
+    /// exclamation mark, a dash. A title Google sends is data and is not in this list's way:
+    /// the fixture has none of these words.
     @Test func noEmDashesAnywhereInTheStringsTheRulesProduce() throws {
         let events = try TestData.inventedEvents()
         var strings: [String] = []
         for time in ["07:50", "09:20", "11:40", "12:10", "14:10", "15:10", "16:20", "17:30"] {
             let now = TestData.wednesday(time)
             for day in ["2026-11-03", "2026-11-04", "2026-11-05", "2026-11-06", "2026-11-07", "2026-11-09"] {
-                let summary = summarize(day: TestData.day(day), events: events, now: now, calendar: calendar)
-                strings += [summary.first, summary.second ?? ""]
                 for row in dayRows(day: TestData.day(day), events: events, now: now, calendar: calendar) {
                     switch row {
                     case .allDay(let e, let p): strings += [e.title, p ?? ""]
@@ -304,7 +272,7 @@ struct FormattingTests {
                             entry.rectangular.when?.reduced ?? "", entry.rectangular.after ?? ""]
             }
         }
-        let banned = try #require(try? Regex(#"(?i)good (morning|afternoon|evening)|\b(busy|packed|light|heavy|hectic|quiet)\b"#))
+        let banned = try #require(try? Regex(#"(?i)good (morning|afternoon|evening)|\b(packed|light|heavy|hectic|quiet)\b"#))
         for string in strings {
             #expect(!string.contains("\u{2014}"), "\(string)")
             #expect(!string.contains("\u{2013}"), "\(string)")

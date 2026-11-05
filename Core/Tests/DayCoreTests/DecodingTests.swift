@@ -248,10 +248,10 @@ struct DecodingTests {
         #expect(decoded.attendeeDomains == ["acme.com"])
         #expect(decoded.response == .accepted)
         #expect(!decoded.isRecurring)
-        #expect(decoded.title == "(No title)")
+        #expect(decoded.title == "Busy")
     }
 
-    @Test func untitledEventsTakeGoogleCalendarsOwnWords() throws {
+    @Test func untitledEventsAreBusyOnEveryCalendar() throws {
         func calendar(_ role: AccessRole) -> CalendarInfo {
             CalendarInfo(
                 id: CalendarID(account: Self.acme, googleID: "team@acme.com"), name: "Team",
@@ -271,13 +271,32 @@ struct DecodingTests {
         #expect(try title("Weekly planning", .owner) == "Weekly planning")
         #expect(try title("Weekly planning ", .reader) == "Weekly planning ")
         #expect(try title("Busy", .freeBusyReader) == "Busy")
-        // No summary, an empty one and a blank one are the same thing to Google Calendar.
+        // No summary, an empty one and a blank one are the same thing to Google Calendar, and
+        // on a free/busy-only calendar too: one word everywhere.
         for missing in [nil, "", "   ", "\n"] {
-            #expect(try title(missing, .owner) == "(No title)")
-            #expect(try title(missing, .writer) == "(No title)")
-            #expect(try title(missing, .reader) == "(No title)")
-            #expect(try title(missing, .freeBusyReader) == "Busy")
+            for role in [AccessRole.owner, .writer, .reader, .freeBusyReader] {
+                #expect(try title(missing, role) == "Busy")
+                #expect(try title(missing, role) == Event.untitled)
+            }
         }
+    }
+
+    @Test func aCacheHoldingTheOldPlaceholderReadsBusy() throws {
+        // Events cached before the placeholder became `Busy` still say `(No title)` on disk.
+        func decode(_ title: String) throws -> Event {
+            let stored = Event(
+                id: EventID(calendar: CalendarID(account: Self.acme, googleID: "x"), googleID: "e1"),
+                iCalUID: "e1", title: title,
+                time: .timed(
+                    start: Date(timeIntervalSince1970: 0), end: Date(timeIntervalSince1970: 3600),
+                    authoredZone: nil))
+            return try JSONDecoder().decode(Event.self, from: JSONEncoder().encode(stored))
+        }
+        #expect(try decode("(No title)").title == "Busy")
+        #expect(try decode("  ").title == "Busy")
+        #expect(try decode("Dentist").title == "Dentist")
+        // A title Google sent that only resembles the placeholder is data and is kept.
+        #expect(try decode("(No title) review").title == "(No title) review")
     }
 }
 
@@ -699,7 +718,7 @@ extension DecodingTests {
             #expect(report.data.accounts.allSatisfy { !$0.signedOut })
             #expect(report.data.eventsByAccount == first.data.eventsByAccount, "\(name)")
             #expect(report.data.eventsByAccount.values.joined().count == 13)
-            // Events as of the last good fetch, which is what the line under the summary names.
+            // Events as of the last good fetch, which is what the status line names.
             #expect(report.data.lastFetchedAt == h.fixture.now)
             #expect(WidgetSnapshot.read(from: h.cache)?.fetchedAt == h.fixture.now)
             // One try per calendar: waiting does not enable an API or lift a block.

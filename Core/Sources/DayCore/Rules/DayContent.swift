@@ -1,15 +1,15 @@
 import Foundation
 
-// What the summary, the Day rows and the widget agree a day contains. One definition of
-// "counted", of the part of an event that falls on a day, and of a free gap, so the summary's
-// free block and the list's gap row can never disagree.
+// What the Day rows and the widget agree a day contains. One definition of "counted", of the
+// part of an event that falls on a day, and of a free gap, so the list and the widget can
+// never disagree.
 
-/// The shortest gap that counts as free time: the summary's free block and the Day's gap row.
+/// The shortest gap that counts as free time: the Day's gap row.
 let freeGapThreshold: TimeInterval = 60 * 60
 
-/// Timed, not cancelled, not declined, of kind default or fromGmail. What the summary counts
-/// and what the Day list draws as a row. A `transparent` (free) event is still counted: it
-/// takes the day's time, and only the overlap rule and the widget leave it out.
+/// Timed, not cancelled, not declined, of kind default or fromGmail. What the Day list draws
+/// as a row and what the widget draws from. A `transparent` (free) event is still counted: it
+/// takes the day's time, and only the widget leaves it out.
 func isCounted(_ event: Event) -> Bool {
     guard case .timed = event.time else { return false }
     return event.status != .cancelled
@@ -27,10 +27,6 @@ struct DaySpan {
     var end: Date
     /// Position in the input, the last tiebreak, so equal times keep account order.
     var order: Int
-
-    func overlaps(_ other: DaySpan) -> Bool {
-        min(end, other.end) > max(start, other.start)
-    }
 }
 
 /// The part of a timed event that falls on `day`, nil when it does not.
@@ -69,21 +65,6 @@ struct FreeGap {
     }
 }
 
-/// The gaps of `freeGapThreshold` or more between consecutive counted events, with
-/// overlapping events counted as one stretch of busy time. Only between events: the time
-/// before the first start and after the last end is not a gap.
-func freeGaps(_ spans: [DaySpan]) -> [FreeGap] {
-    guard var reach = spans.first?.end else { return [] }
-    var gaps: [FreeGap] = []
-    for span in spans.dropFirst() {
-        if span.start.timeIntervalSince(reach) >= freeGapThreshold {
-            gaps.append(FreeGap(start: reach, end: span.start))
-        }
-        reach = max(reach, span.end)
-    }
-    return gaps
-}
-
 /// Whether an event covers the whole of `day`. All-day items cover their civil days; a timed
 /// one has to run from midnight to midnight or longer.
 func coversWholeDay(_ event: Event, on day: CivilDate, calendar: Calendar) -> Bool {
@@ -92,29 +73,5 @@ func coversWholeDay(_ event: Event, on day: CivilDate, calendar: Calendar) -> Bo
         return first <= day && day < endExclusive
     case .timed(let from, let to, _):
         return from <= day.date(in: calendar) && to >= day.adding(days: 1).date(in: calendar)
-    }
-}
-
-/// The out-of-office event that covers the whole of `day`, the one that ends last if there
-/// are several.
-func wholeDayOutOfOffice(on day: CivilDate, events: [Event], calendar: Calendar) -> Event? {
-    var best: (event: Event, end: Date)?
-    for event in events
-    where event.kind == .outOfOffice && event.status != .cancelled && event.response != .declined
-        && coversWholeDay(event, on: day, calendar: calendar)
-    {
-        let end = event.time.end(in: calendar)
-        if best == nil || end > best!.end { best = (event, end) }
-    }
-    return best?.event
-}
-
-/// The day an out-of-office event returns on, for `until Friday`: the day its end falls on.
-/// An end at midnight is exclusive, so it names the first day back; an all-day item's
-/// exclusive end does the same.
-func outOfOfficeReturn(_ event: Event, calendar: Calendar) -> CivilDate {
-    switch event.time {
-    case .allDay(_, let endExclusive): endExclusive
-    case .timed(_, let end, _): CivilDate(end, in: calendar)
     }
 }

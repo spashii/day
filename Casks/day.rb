@@ -3,10 +3,12 @@ cask "day" do
   # Placeholder until the first release: tools/release.sh writes the real checksum.
   sha256 "0000000000000000000000000000000000000000000000000000000000000000"
 
-  url "https://github.com/spashii/day/releases/download/v#{version}/Day-#{version}.dmg"
+  # The address redirects to the GitHub release (v<version>/Day-<version>.dmg, the name
+  # tools/release.sh gives the image), so apps.idea2prod.in can count downloads by version.
+  url "https://apps.idea2prod.in/day/download/#{version}"
   name "Day"
   desc "Shows all your Google calendars as one"
-  homepage "https://spashii.github.io/day/"
+  homepage "https://apps.idea2prod.in/day/"
 
   auto_updates true
   depends_on arch: :arm64

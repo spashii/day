@@ -21,8 +21,7 @@ public enum Formatting {
         return word.prefix(1).uppercased() + word.dropFirst()
     }
 
-    /// `2 more`. A numeral at every size, as the all-day line, the Earlier row and the
-    /// one-offs sentence write it.
+    /// `2 more`. A numeral at every size, as the all-day line and the Earlier row write it.
     public static func more(_ n: Int) -> String {
         "\(n) more"
     }
@@ -92,19 +91,6 @@ public enum Formatting {
         }
     }
 
-    /// A time as read from `day`: plain (`0:15`) on that day, with its weekday (`Fri 0:15`)
-    /// within a week of it, and with its date (`20 Nov 9:00`) beyond that, where a weekday
-    /// name would read as the wrong week. The summary uses it for a range or a start that
-    /// falls on another day than the one it describes. It is anchored to the day described,
-    /// not to today, so the same day reads the same wherever it is opened from, and it never
-    /// says `Tomorrow` mid-sentence.
-    public static func dayTime(_ date: Date, seenFrom day: CivilDate, calendar: Calendar) -> String {
-        let there = CivilDate(date, in: calendar)
-        if there == day { return time(date, calendar: calendar) }
-        if abs(day.distance(to: there)) < 7 { return weekdayTime(date, calendar: calendar) }
-        return "\(firstOfMonth(there, calendar: calendar)) \(time(date, calendar: calendar))"
-    }
-
     /// `Thu`.
     public static func shortWeekday(_ date: Date, calendar: Calendar) -> String {
         date.formatted(style(calendar).weekday(.abbreviated))
@@ -154,15 +140,6 @@ public enum Formatting {
     /// `1 Dec`, beside the numeral on the first of a month.
     public static func firstOfMonth(_ day: CivilDate, calendar: Calendar) -> String {
         day.date(in: calendar).formatted(style(calendar).day().month(.abbreviated))
-    }
-
-    /// Where an out-of-office block ends, for `Out of office until Friday.`: the weekday
-    /// while it is under a week away, the date after that, because a weekday name seven days
-    /// out reads as today's.
-    public static func until(_ end: CivilDate, from day: CivilDate, calendar: Calendar) -> String {
-        day.distance(to: end) < 7
-            ? weekday(end, calendar: calendar)
-            : dayAndMonth(end, calendar: calendar)
     }
 
     // MARK: Event lines
@@ -225,14 +202,6 @@ public enum Formatting {
             !location.isEmpty, !looksLikeLink(location)
         else { return nil }
         return location.split(whereSeparator: \.isNewline).first.map(String.init)
-    }
-
-    /// A menu bar title cut at `limit` characters and followed by an ellipsis, so the cut
-    /// reads as one: a cut title is `limit` characters and one ellipsis wide. A space left at
-    /// the cut is dropped before the ellipsis.
-    public static func truncated(_ title: String, to limit: Int) -> String {
-        guard title.count > limit else { return title }
-        return String(title.prefix(limit)).trimmingCharacters(in: .whitespaces) + "…"
     }
 
     // MARK: Private

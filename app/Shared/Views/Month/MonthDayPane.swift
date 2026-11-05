@@ -2,8 +2,8 @@ import DayCore
 import SwiftUI
 
 /// The selected day under the iPhone's month grid: a date line that opens the full Day, then
-/// the same `DayList` the Day draws, with its summary, all-day lines, Earlier row, now line,
-/// rows and Join. So the month answers "what does this day look like" without a navigation,
+/// the same `DayList` the Day draws, with its all-day lines, Earlier row, now line, rows and
+/// Join. So the month answers "what does this day look like" without a navigation,
 /// and the Day is one tap further.
 struct MonthDayPane: View {
     @EnvironmentStore private var store

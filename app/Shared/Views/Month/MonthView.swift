@@ -5,7 +5,7 @@ import SwiftUI
 /// and titled lines, routine is gray dots, today is the red numeral.
 ///
 /// On the iPhone the pages turn sideways under the weekday letters, and the selected day sits
-/// under the grid: its date line, its summary and its rows. On the Mac the page fills the
+/// under the grid: its date line and its rows. On the Mac the page fills the
 /// window and the parent shows the selected day in its inspector. The parent supplies the
 /// title, the toolbar and what a tap on a day does.
 struct MonthView: View {
@@ -41,7 +41,7 @@ struct MonthView: View {
     // MARK: iPhone
 
     /// The grid takes two thirds of the height under the weekday letters, the selected day the
-    /// rest, so a six-week month still leaves the summary and the first rows in view. Every
+    /// rest, so a six-week month still leaves the date line and the first rows in view. Every
     /// month gets the same grid height, so the day stays put while the pages turn. At the
     /// largest text sizes the grid grows to what its pages need, up to three quarters.
     private var gridHeight: CGFloat {

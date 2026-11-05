@@ -2,10 +2,50 @@ import AuthenticationServices
 import DayCore
 import SwiftUI
 
-/// The lines directly under the summary that say what is wrong with the data on screen:
-/// offline, Google unreachable, an account signed out. Each is a line of text where the
-/// content is, never a banner, and it goes away with the next good fetch. While everything
-/// is fine it draws nothing.
+/// What a day says before its events, when it has something to say: `Loading…` the first
+/// time, `No calendars shown.` when every calendar is hidden, `Nothing scheduled.` for a day
+/// with no events, then the status lines. Each is a line of text where the content would be,
+/// never a banner. While everything is fine it draws nothing, so the day starts with its
+/// events.
+struct DayStateLines: View {
+    @EnvironmentStore private var store
+    @Environment(\.chooseCalendars) private var chooseCalendars
+
+    /// The day has no rows at all: no all-day line, no event.
+    let isEmpty: Bool
+
+    /// Whether `body` draws anything. The list adds a row for it only then, because a row
+    /// with nothing in it would still take its height and its separator.
+    static func isShown(in store: any CalendarStore, isEmpty: Bool) -> Bool {
+        store.allCalendarsHidden || store.status != .current || isEmpty
+            || !store.signedOutAccounts.isEmpty
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.cell) {
+            if store.allCalendarsHidden {
+                Text("No calendars shown.")
+                    .foregroundStyle(.secondary)
+                if let chooseCalendars {
+                    Button("Choose Calendars…") { chooseCalendars() }
+                        .buttonStyle(.borderless)
+                }
+            } else if store.status == .loading {
+                Text("Loading…")
+                    .foregroundStyle(.secondary)
+            } else if isEmpty {
+                Text("Nothing scheduled.")
+                    .foregroundStyle(.secondary)
+            }
+            StatusLines()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// The lines that say what is wrong with the data on screen: offline, Google unreachable, an
+/// account signed out. Each is a line of text where the content is, never a banner, and it
+/// goes away with the next good fetch. While everything is fine it draws nothing.
 struct StatusLines: View {
     @EnvironmentStore private var store
     @Environment(\.webAuthenticationSession) private var session
@@ -73,8 +113,10 @@ struct StatusLines: View {
     }
 }
 
-/// Runs a Google sign-in and turns its failure into the line the screen shows. Closing
-/// Google's sheet is a choice, not a failure, so it shows nothing.
+/// Runs a Google sign-in and turns its failure into the line the screen shows, which is the
+/// failure's own description: the stores word it in plain words (`SignInFailure`, the keychain
+/// failure) and keep every status and code in the log. Closing Google's sheet is a choice,
+/// not a failure, so it shows nothing.
 @MainActor
 enum SignIn {
     static func run(_ work: @MainActor () async throws -> Void) async -> String? {
@@ -86,7 +128,9 @@ enum SignIn {
         } catch let error as ASWebAuthenticationSessionError where error.code == .canceledLogin {
             return nil
         } catch {
-            return "Couldn't sign in to Google: \(error.localizedDescription)"
+            // Only a store's own words reach the screen. Anything else is not worded for a
+            // person and may carry a code.
+            return (error as? any LocalizedError)?.errorDescription ?? SignInFailure.unfinished
         }
     }
 }

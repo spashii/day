@@ -1,7 +1,7 @@
-# Two renderers for tools/screenshots.sh, kept out of app/project.yml so nothing here can end
-# up in a release. Each compiles the app's own view files and draws them to PNG files on the
-# invented fixture: the widget's views in the iOS simulator, the Mac views in windows placed
-# off every screen.
+# Three renderers for tools/screenshots.sh, kept out of app/project.yml so nothing here can
+# end up in a release. Each compiles the app's own view files and draws them to PNG files on
+# the invented fixture: the Lock Screen widget's views in the iOS simulator, the Mac views in
+# windows placed off every screen, and the desktop widget's families offscreen.
 name: Shots
 options:
   bundleIdPrefix: io.github.spashii.day.shots
@@ -85,6 +85,40 @@ targets:
       - package: Sparkle
       - sdk: ServiceManagement.framework
 
+  DayMacWidgetShots:
+    type: application
+    platform: macOS
+    sources:
+      - path: MacWidget
+        excludes: ["Info.plist"]
+      # The desktop widget's content, provider and views, without its @main and its previews.
+      - path: ../../app/MacWidget
+        excludes: ["Info.plist", "*.entitlements", "TodayWidget.swift", "TodayPreviews.swift"]
+      - path: ../../app/Mac
+        includes: ["WidgetSnapshotWriter.swift"]
+      - path: ../../app/Shared/Model
+        includes: ["Colors.swift"]
+      - path: ../../app/Widget
+        includes: ["NextDemo.swift"]
+      - path: ../../Core/Tests/DayCoreTests/Fixtures/invented-week.json
+        buildPhase: resources
+    info:
+      path: MacWidget/Info.plist
+      properties:
+        CFBundleName: Day Widget Shots
+        # An accessory app: no Dock icon and no menu bar while it draws.
+        LSUIElement: true
+        GoogleClientID: $(DAY_GOOGLE_CLIENT_ID).apps.googleusercontent.com
+    settings:
+      base:
+        PRODUCT_NAME: DayMacWidgetShots
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.spashii.day.shots.macwidget
+        ENABLE_HARDENED_RUNTIME: NO
+    dependencies:
+      - package: DayCore
+        product: DayCore
+      - sdk: WidgetKit.framework
+
 schemes:
   DayWidgetShots:
     build:
@@ -94,3 +128,7 @@ schemes:
     build:
       targets:
         DayMacShots: all
+  DayMacWidgetShots:
+    build:
+      targets:
+        DayMacWidgetShots: all

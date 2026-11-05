@@ -1,3 +1,4 @@
+import AppKit
 import DayCore
 import SwiftUI
 
@@ -5,8 +6,8 @@ import SwiftUI
 /// with the month's name leading in the toolbar, previous, Today and next in the center and
 /// the inspector toggle trailing. No sidebar, no view switcher, no plus and no search.
 ///
-/// Until an account exists the window shows the first-run screen instead, with `Open at
-/// login` under it so the choice is offered once and never made silently.
+/// Until an account exists the window is the small first-run window instead (`FirstRunWindow`),
+/// and it becomes this one as soon as the first account is added.
 struct MainWindow: View {
     @EnvironmentStore private var store
     @Environment(\.openSettings) private var openSettings
@@ -15,12 +16,15 @@ struct MainWindow: View {
     let login: OpenAtLogin
 
     @State private var firstRun: Bool
+    @State private var window: NSWindow?
     @FocusState private var focused: Bool
 
     /// The smallest window. At 720 pt the Month keeps 60 pt per day beside the pane at its
     /// ideal 300 pt, so the pane never has to collapse on its own: it stays until the person
     /// hides it with the toolbar button or Option-Command-I.
     static let minimumSize = CGSize(width: 720, height: 480)
+    /// The size it opens at, and the size it grows to when first run ends.
+    static let idealSize = CGSize(width: 1080, height: 720)
 
     init(state: MacState, login: OpenAtLogin) {
         self.state = state
@@ -31,12 +35,16 @@ struct MainWindow: View {
     var body: some View {
         Group {
             if firstRun {
-                firstRunScreen
+                FirstRunWindow(login: login)
             } else {
                 calendarScreen
+                    .frame(
+                        minWidth: Self.minimumSize.width, idealWidth: Self.idealSize.width,
+                        maxWidth: .infinity,
+                        minHeight: Self.minimumSize.height, idealHeight: Self.idealSize.height,
+                        maxHeight: .infinity)
             }
         }
-        .frame(minWidth: Self.minimumSize.width, minHeight: Self.minimumSize.height)
         .navigationTitle(firstRun ? "Day" : state.title)
         .toolbar {
             if !firstRun {
@@ -55,9 +63,16 @@ struct MainWindow: View {
                 openSettings()
             }
         )
+        .background(WindowReader { window = $0 })
         .focusedSceneValue(\.dayWindow, state)
+        // The first account ends first run at once; the window is the Month from then on. When
+        // every account is signed out it is the small window again, until one signs back in.
         .onChange(of: store.needsFirstRun) { _, needs in
-            if needs { firstRun = true }
+            if needs {
+                firstRun = true
+            } else if firstRun {
+                leaveFirstRun()
+            }
         }
         .onAppear {
             state.windowIsOpen = true
@@ -139,26 +154,47 @@ struct MainWindow: View {
 
     // MARK: First run
 
-    private var firstRunScreen: some View {
-        FirstRunView { leaveFirstRun() }
-            .frame(maxWidth: 520)
-            .frame(maxWidth: .infinity)
-            .safeAreaInset(edge: .bottom) {
-                Toggle(
-                    "Open at login",
-                    isOn: Binding(get: { login.isOn }, set: { login.set($0) })
-                )
-                .toggleStyle(.checkbox)
-                .scenePadding([.horizontal, .bottom])
-                .frame(maxWidth: 520, alignment: .leading)
-                .frame(maxWidth: .infinity)
-            }
-    }
-
     private func leaveFirstRun() {
         firstRun = false
         state.goToToday()
+        growWindow()
     }
+
+    /// The window follows its content from the first-run size only as far as the Month's
+    /// minimum. First run is over, so the Month opens at the size it opens at on any other
+    /// launch, centered where the small window was.
+    private func growWindow() {
+        // After the content change has landed and the window has taken its new limits.
+        DispatchQueue.main.async {
+            guard let window, let screen = window.screen else { return }
+            let area = screen.visibleFrame
+            // The ideal size is the content's, below the title bar and the toolbar.
+            var size = Self.idealSize
+            size.height += window.frame.height - window.contentLayoutRect.height
+            size.width = min(size.width, area.width)
+            size.height = min(size.height, area.height)
+            let center = CGPoint(x: window.frame.midX, y: window.frame.midY)
+            var origin = CGPoint(x: center.x - size.width / 2, y: center.y - size.height / 2)
+            origin.x = min(max(origin.x, area.minX), area.maxX - size.width)
+            origin.y = min(max(origin.y, area.minY), area.maxY - size.height)
+            window.setFrame(NSRect(origin: origin, size: size), display: true, animate: true)
+        }
+    }
+}
+
+/// Hands the window that hosts a view to `onWindow`, once it exists.
+private struct WindowReader: NSViewRepresentable {
+    let onWindow: (NSWindow) -> Void
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        DispatchQueue.main.async { [weak view] in
+            if let window = view?.window { onWindow(window) }
+        }
+        return view
+    }
+
+    func updateNSView(_ view: NSView, context: Context) {}
 }
 
 #Preview("Window") {
@@ -172,5 +208,4 @@ struct MainWindow: View {
     let store = PreviewStore.make(state: .noAccount)
     MainWindow(state: MacState(store: store), login: OpenAtLogin())
         .calendarStore(store)
-        .frame(width: 720, height: 480)
 }

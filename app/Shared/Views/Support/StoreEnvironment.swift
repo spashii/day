@@ -92,7 +92,7 @@ extension EnvironmentValues {
 }
 
 /// The spacing scale from the brief: 4 inside a row, 8 between a cell's elements, 16 between
-/// the summary and the list, 24 above section breaks. Nothing else is used.
+/// blocks, 24 above section breaks. Nothing else is used.
 enum Spacing {
     static let row: CGFloat = 4
     static let cell: CGFloat = 8

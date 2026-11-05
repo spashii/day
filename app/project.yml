@@ -30,7 +30,9 @@ packages:
     exactVersion: 2.10.1
 targets:
   # Day for macOS: a regular app with a Dock icon, unsandboxed, released with Developer ID.
-  # No App Group and no extension, so it needs no provisioning profile.
+  # Embeds the desktop widget and shares one App Group with it. The group's identifier
+  # carries the Team ID, which the Developer ID signature itself authorises, so neither
+  # target needs a provisioning profile.
   DayMac:
     type: application
     platform: macOS
@@ -61,9 +63,25 @@ targets:
         LSApplicationCategoryType: public.app-category.productivity
         NSHumanReadableCopyright: Free software under the MIT License.
         GoogleClientID: $(DAY_GOOGLE_CLIENT_ID).apps.googleusercontent.com
-        SUFeedURL: https://spashii.github.io/day/appcast.xml
+        # apps.idea2prod.in serves site/appcast.xml and counts the checks by app, version and
+        # country. SUEnableSystemProfiling is never set, so a check carries no system profile.
+        # The updater delegate adds self=1 to the request on the author's own Macs
+        # (Mac/UpdaterDelegate.swift), so the count can leave them out.
+        SUFeedURL: https://apps.idea2prod.in/day/appcast.xml
         # Updates must be signed with the matching private key, kept with the Developer ID.
         SUPublicEDKey: YLvPSGEaYiPsXphy/q9LCDGs2s0qp8hM2LVBIWbl78c=
+        # day:// for clicks on the desktop widget, which open Day on a day.
+        CFBundleURLTypes:
+          - CFBundleURLName: io.github.spashii.day
+            CFBundleURLSchemes:
+              - day
+    # The App Group only: the app stays unsandboxed. It copies the widget snapshot into the
+    # group (Mac/WidgetSnapshotWriter.swift); its cache stays in Application Support.
+    entitlements:
+      path: Mac/Day.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - JMCP69LCSU.io.github.spashii.day
     settings:
       base:
         PRODUCT_NAME: Day
@@ -92,6 +110,7 @@ targets:
         product: DayCore
       - package: Sparkle
       - sdk: ServiceManagement.framework
+      - target: DayMacWidget
 
   # Day for iPhone. Shares app/Shared with the Mac and embeds the Lock Screen widget; the
   # App Group carries the widget snapshot and doubles as the keychain access group.
@@ -195,6 +214,67 @@ targets:
         SKIP_INSTALL: YES
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: JMCP69LCSU
+    dependencies:
+      - package: DayCore
+        product: DayCore
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+
+  # The desktop widget "Today", embedded in DayMac. A Mac extension must be sandboxed; it
+  # reads only the snapshot the app copies into the shared App Group, holds no tokens and
+  # never goes online. Signed like the app: ad hoc or "Blend Dev" in Debug, the Developer ID
+  # in Release, which is what authorises the Team ID group.
+  DayMacWidget:
+    type: app-extension
+    platform: macOS
+    sources:
+      - path: MacWidget
+        excludes: ["Info.plist", "*.entitlements"]
+      # The group's identifier and folder, one definition for the app and the widget.
+      - path: Mac
+        includes: ["WidgetSnapshotWriter.swift"]
+      # Event colors as the Day list draws them.
+      - path: Shared/Model
+        includes: ["Colors.swift"]
+      # The invented week for the gallery and for running without a Google client.
+      - path: Widget
+        includes: ["NextDemo.swift"]
+      - path: ../Core/Tests/DayCoreTests/Fixtures/invented-week.json
+        buildPhase: resources
+    info:
+      path: MacWidget/Info.plist
+      properties:
+        CFBundleDisplayName: Day
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSMinimumSystemVersion: "26.0"
+        GoogleClientID: $(DAY_GOOGLE_CLIENT_ID).apps.googleusercontent.com
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: MacWidget/DayMacWidget.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.application-groups:
+          - JMCP69LCSU.io.github.spashii.day
+    settings:
+      base:
+        PRODUCT_NAME: DayMacWidget
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.spashii.day.widget
+        APPLICATION_EXTENSION_API_ONLY: YES
+        SKIP_INSTALL: YES
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGN_IDENTITY: "-"
+        DEVELOPMENT_TEAM: ""
+        ENABLE_HARDENED_RUNTIME: YES
+      # The same split as DayMac: no hardened runtime in Debug, where a certificate without
+      # a team fails library validation, and no debugger entitlement in Release, which
+      # notarization refuses in any nested code.
+      configs:
+        Debug:
+          ENABLE_HARDENED_RUNTIME: NO
+        Release:
+          CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
     dependencies:
       - package: DayCore
         product: DayCore

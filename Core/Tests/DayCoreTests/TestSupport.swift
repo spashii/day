@@ -156,10 +156,18 @@ extension WidgetEntry {
         if let when = rectangular.when {
             second = when.text
             if let start = when.relativeTo {
-                second! += " · in \(Formatting.countdown(start.timeIntervalSince(now)))"
+                second! += " · \(Self.systemCountdown(to: start, from: now))"
             }
         }
         return [rectangular.title, second, rectangular.after]
+    }
+
+    /// What `Text(.currentDate, format: .reference(to:))` writes inside the hour: `in 10
+    /// minutes`, `in 1 minute`. The system's words, not Day's: the widget never abbreviates
+    /// them.
+    static func systemCountdown(to start: Date, from now: Date) -> String {
+        let minutes = Int((max(0, start.timeIntervalSince(now)) / 60).rounded(.up))
+        return minutes == 1 ? "in 1 minute" : "in \(minutes) minutes"
     }
 
     /// The circular family as the brief's table writes it: `THU 9:30`, `9:30`, or `symbol`.

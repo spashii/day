@@ -23,7 +23,8 @@ public struct CacheDirectory: Hashable, Sendable {
     }
 
     /// The App Group container on iPhone, so the widget reads what the app writes; on the
-    /// Mac, `~/Library/Application Support/Day`, since there is no extension to share with.
+    /// Mac, `~/Library/Application Support/Day`. The Mac's desktop widget reads only the
+    /// snapshot, which the app copies into the App Group itself (`WidgetSnapshotWriter`).
     public static func shared() throws -> CacheDirectory {
         let fileManager = FileManager.default
         #if os(iOS)

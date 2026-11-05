@@ -3,7 +3,7 @@ import SwiftUI
 
 /// One day. On the iPhone it is a page of `DayPager`, whose navigation bar carries the
 /// weekday with the date right under it; on the Mac it is the inspector, with
-/// `Wednesday 4 November` in Title 2 above the summary. The same `DayList` either way, so
+/// `Wednesday 4 November` in Title 2 above the rows. The same `DayList` either way, so
 /// there is one day design.
 struct DayView: View {
     @EnvironmentStore private var store

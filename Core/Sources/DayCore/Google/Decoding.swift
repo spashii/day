@@ -11,8 +11,8 @@ import Foundation
 ///   `hangoutLink`, a URL in the location, a known meeting URL in the description.
 /// - The color is the event label's, then the event's `colorId` in the modern palette, then
 ///   the calendar's, mapped onto the thirteen system colors.
-/// - An event with no title is `Busy` on a free/busy-only calendar and `(No title)` anywhere
-///   else, so no surface ever draws an empty title.
+/// - An event with no title is `Busy` on every calendar, free/busy-only or not, so no
+///   surface ever draws an empty title.
 public enum GoogleDecoding {
     // MARK: Calendars
 
@@ -109,7 +109,7 @@ public enum GoogleDecoding {
             id: EventID(calendar: calendar.id, googleID: google.id),
             iCalUID: nonEmpty(google.iCalUID) ?? google.id,
             originalStart: google.originalStartTime.flatMap(originalStart),
-            title: title(google.summary, on: calendar),
+            title: title(google.summary),
             time: time,
             kind: google.eventType.flatMap(EventKind.init(rawValue:)) ?? .default,
             status: google.status.flatMap(EventStatus.init(rawValue:)) ?? .confirmed,
@@ -146,12 +146,11 @@ public enum GoogleDecoding {
 
     /// The title exactly as written in Google. Google sends no `summary` for an untitled
     /// event, and none for events on a calendar shared as free/busy only; a blank title would
-    /// draw an empty row, an empty widget line and `One to go:  at 16:00.`, so those take
-    /// Google Calendar's own words. Titles stay data, which is why this is decided here and
-    /// not in the views.
-    static func title(_ summary: String?, on calendar: CalendarInfo) -> String {
+    /// draw an empty row and an empty widget line, so both are `Event.untitled`. Titles stay
+    /// data, which is why this is decided here and not in the views.
+    static func title(_ summary: String?) -> String {
         if let summary, !summary.allSatisfy(\.isWhitespace) { return summary }
-        return calendar.accessRole == .freeBusyReader ? "Busy" : "(No title)"
+        return Event.untitled
     }
 
     static func eventTime(_ google: GoogleEvent, calendarZone: String) -> EventTime? {

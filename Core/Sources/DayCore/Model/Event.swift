@@ -95,7 +95,7 @@ public struct Event: Codable, Hashable, Identifiable, Sendable {
     /// `originalStartTime` of a recurring instance; nil for single events. With `iCalUID`
     /// it is the merge key, because one instance has a different ID in every account.
     public var originalStart: Date?
-    /// Exactly as written in Google, emoji included.
+    /// Exactly as written in Google, emoji included. `Event.untitled` when Google sent none.
     public var title: String
     public var time: EventTime
     public var kind: EventKind
@@ -168,6 +168,15 @@ public struct Event: Codable, Hashable, Identifiable, Sendable {
         self.calendars = calendars ?? [id.calendar]
     }
 
+    /// What an event with no title is called on every surface: the row, the month, the
+    /// sheet, the widgets and the menu bar. Google sends no title for an untitled event or
+    /// for any event on a calendar shared as free/busy only, and an empty one would draw an
+    /// empty line.
+    public static let untitled = "Busy"
+
+    /// The placeholder Day wrote for an untitled event before `untitled` was one word.
+    private static let formerPlaceholder = "(No title)"
+
     public var account: AccountID {
         id.account
     }
@@ -176,8 +185,7 @@ public struct Event: Codable, Hashable, Identifiable, Sendable {
         time.isAllDay
     }
 
-    /// Someone besides the account holder is invited. Decides `meetings` over `events` in the
-    /// summary and `No reply yet` on a row.
+    /// Someone besides the account holder is invited. Decides `No reply yet` on a row.
     public var hasOtherAttendees: Bool {
         attendeeCount > 1
     }
@@ -189,7 +197,12 @@ public struct Event: Codable, Hashable, Identifiable, Sendable {
         id = try c.decode(EventID.self, forKey: .id)
         iCalUID = try c.decodeIfPresent(String.self, forKey: .iCalUID) ?? id.googleID
         originalStart = try c.decodeIfPresent(Date.self, forKey: .originalStart)
-        title = try c.decodeIfPresent(String.self, forKey: .title) ?? ""
+        // A cache written before `untitled` holds the old placeholder; reading it as
+        // `untitled` fixes those events at once instead of waiting for a full read of each
+        // calendar, and keeps the cache the person is using.
+        let stored = try c.decodeIfPresent(String.self, forKey: .title) ?? ""
+        title = stored.allSatisfy(\.isWhitespace) || stored == Event.formerPlaceholder
+            ? Event.untitled : stored
         time = try c.decode(EventTime.self, forKey: .time)
         kind = try c.decodeIfPresent(EventKind.self, forKey: .kind) ?? .default
         status = try c.decodeIfPresent(EventStatus.self, forKey: .status) ?? .confirmed

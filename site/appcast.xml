@@ -2,7 +2,7 @@
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
   <channel>
     <title>Day</title>
-    <link>https://spashii.github.io/day/</link>
+    <link>https://apps.idea2prod.in/day/</link>
     <description>Day releases, read by the app's Check for Updates.</description>
     <language>en</language>
     <!-- tools/release.sh adds each release below this line. -->

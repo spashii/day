@@ -46,13 +46,13 @@ protocol CalendarStore: AnyObject, Observable {
     func removeAccount(_ account: AccountID)
 }
 
-/// The fetching state the screen reports, one line under the summary. Signed-out accounts,
+/// The fetching state the screen reports, one line above the day's events. Signed-out accounts,
 /// no accounts and all calendars hidden are read from `accounts` and visibility instead,
 /// because they can hold at the same time as any of these.
 enum StoreStatus: Hashable, Sendable {
     /// Nothing to say: cached or fresh data on screen.
     case current
-    /// First fetch with nothing cached: the summary reads `Loading…`. Once per install.
+    /// First fetch with nothing cached: the day reads `Loading…`. Once per install.
     case loading
     /// `Offline. Showing events as of 9:40.`
     case offline
@@ -91,8 +91,7 @@ extension CalendarStore {
         !accounts.isEmpty && !calendars.contains { isVisible($0.id) }
     }
 
-    /// The merged events of one day plus the next, which the summary's sentence two and the
-    /// Day's rows need.
+    /// The merged events the Day's rows for one day are built from: that day and the next.
     func dayEvents(_ day: CivilDate) -> [Event] {
         events(in: day...day.adding(days: 1))
     }

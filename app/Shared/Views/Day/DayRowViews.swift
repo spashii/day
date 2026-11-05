@@ -214,26 +214,3 @@ struct AllDayRowContent: View {
             .contentShape(.rect)
     }
 }
-
-/// The summary: one paragraph of plain text, sentence one in the label color and sentence
-/// two in the secondary color. No card, no icon, no greeting.
-struct SummaryParagraph: View {
-    let summary: Summary
-
-    var body: some View {
-        Text(text)
-            .font(.title3)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .fixedSize(horizontal: false, vertical: true)
-    }
-
-    private var text: AttributedString {
-        var text = AttributedString(summary.first)
-        if let second = summary.second {
-            var tail = AttributedString(" " + second)
-            tail.foregroundColor = .secondary
-            text += tail
-        }
-        return text
-    }
-}

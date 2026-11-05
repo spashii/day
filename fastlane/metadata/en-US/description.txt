@@ -1,6 +1,6 @@
 Day shows the calendars Google lists for each of your accounts as one, read-only.
 
-The next event is on your Lock Screen, above or below the clock. Today is two sentences: "Four to go, done at 17:00. Investor call and Acme sync overlap at 14:30." The month names its big events: multi-day events are bars, one-offs that matter get a title, and recurring events are dots.
+The next event is on your Lock Screen, above or below the clock. The month names its big events: multi-day events are bars, one-offs that matter get a title, and recurring events are dots.
 
 - Several Google accounts in one view.
 - A Lock Screen widget in three sizes.
@@ -10,7 +10,7 @@ The next event is on your Lock Screen, above or below the clock. Today is two se
 
 Day does not edit events, send replies or send notifications. Google Calendar does that, one tap away.
 
-Day reads your calendars from Google and keeps them on your iPhone. It collects nothing.
+Day reads your calendars from Google and keeps them on this device. Day itself collects nothing.
 
 Free and open source.
 

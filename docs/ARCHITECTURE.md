@@ -16,13 +16,14 @@ Core/                       Swift package, Foundation only
   Tests/DayCoreTests/
     Fixtures/               invented-week.json and recorded Google responses (all invented)
 app/
-  project.yml               XcodeGen: DayMac, DayPhone, DayWidget
+  project.yml               XcodeGen: DayMac, DayPhone, DayWidget, DayMacWidget
   Shared/Model/             CalendarStore, FixtureStore, AppModel, KeychainTokenStore, Routes, Colors, CalendarSymbols
   Shared/Views/             Month, Day, Event, Accounts, States; used by both apps
   Shared/Resources/         Localizable.xcstrings
   iPhone/                   iPhone entry point and shell
-  Mac/                      Mac entry point, window, menu bar, settings, updates
+  Mac/                      Mac entry point, window, first-run window, menu bar, settings, updates, widget snapshot copy
   Widget/                   the Lock Screen widget "Next"
+  MacWidget/                the Mac desktop widget "Today"
   AppIcon.icon              Icon Composer icon, picked up by project.yml when present
   PrivacyInfo.xcprivacy     privacy manifest, picked up when present
 tools/                      sync.sh, build.sh, test.sh, screenshots.sh, release scripts
@@ -35,13 +36,14 @@ Generated files stay out of git: `app/Day.xcodeproj`, every `Info.plist` and `.e
 
 | Target | Product | Sources | Notes |
 |---|---|---|---|
-| `DayMac` | `Day.app`, `io.github.spashii.day`, macOS 26 | `app/Mac`, `app/Shared` | Regular app with a Dock icon, unsandboxed, no App Group. Sparkle 2.10.1 pinned exactly. Debug is signed with the "Blend Dev" identity when it exists (`tools/build.sh`), ad hoc otherwise. The hardened runtime is off in Debug, because library validation refuses Sparkle under a certificate with no team; Release keeps it for notarization. |
+| `DayMac` | `Day.app`, `io.github.spashii.day`, macOS 26 | `app/Mac`, `app/Shared` | Regular app with a Dock icon, unsandboxed. App Group `JMCP69LCSU.io.github.spashii.day`, which carries only the desktop widget's snapshot; the Team ID prefix is authorised by the Developer ID signature, so no provisioning profile is needed, and a build signed without that team leaves the group alone. URL scheme `day`. Embeds the desktop widget. Sparkle 2.10.1 pinned exactly. Debug is signed with the "Blend Dev" identity when it exists (`tools/build.sh`), ad hoc otherwise. The hardened runtime is off in Debug, because library validation refuses Sparkle under a certificate with no team; Release keeps it for notarization. |
 | `DayPhone` | `Day.app`, `io.github.spashii.day`, iOS 26, iPhone only | `app/iPhone`, `app/Shared` | App Group `group.io.github.spashii.day`, URL schemes `day` and the reversed Google client ID, background fetch with task `io.github.spashii.day.refresh`. Embeds the widget. |
 | `DayWidget` | `DayWidget.appex`, `io.github.spashii.day.widget` | `app/Widget`, `app/Shared/Model/KeychainTokenStore.swift` | Same App Group, no Data Protection entitlement (it would hide the widget while the phone is locked). Does not compile the shared views or stores. |
+| `DayMacWidget` | `DayMacWidget.appex`, `io.github.spashii.day.widget`, macOS 26 | `app/MacWidget`, `app/Mac/WidgetSnapshotWriter.swift`, `app/Shared/Model/Colors.swift`, `app/Widget/NextDemo.swift` | The desktop widget "Today". Sandboxed, as every Mac extension must be, with the same App Group as `DayMac`. Reads only the snapshot the app copies into the group; holds no tokens and never goes online. Signed like the app, with the same Debug and Release split for the hardened runtime and the debugger entitlement. |
 
-All three link `DayCore` and bundle `invented-week.json`. Swift 6 language mode everywhere, with no default actor isolation: Core is `Sendable` and nonisolated, `CalendarStore` and its implementations are `@MainActor`.
+All four link `DayCore` and bundle `invented-week.json`. Swift 6 language mode everywhere, with no default actor isolation: Core is `Sendable` and nonisolated, `CalendarStore` and its implementations are `@MainActor`.
 
-The Google OAuth client ID is the build setting `DAY_GOOGLE_CLIENT_ID` in `project.yml`, without its `.apps.googleusercontent.com` suffix. It becomes the Info.plist key `GoogleClientID` in all three targets and the `com.googleusercontent.apps.<id>` URL scheme on the iPhone. While it holds the placeholder `000000000000-placeholder`, both apps run on the fixture.
+The Google OAuth client ID is the build setting `DAY_GOOGLE_CLIENT_ID` in `project.yml`, without its `.apps.googleusercontent.com` suffix. It becomes the Info.plist key `GoogleClientID` in every target and the `com.googleusercontent.apps.<id>` URL scheme on the iPhone. While it holds the placeholder `000000000000-placeholder`, both apps run on the fixture.
 
 Simulator builds are signed to run locally (no Apple account needed). That signature carries the App Group entitlement; `CODE_SIGNING_ALLOWED=NO` drops it and the widget can no longer read the app's snapshot.
 
@@ -57,7 +59,7 @@ Simulator builds are signed to run locally (no Apple account needed). That signa
 - `EventID(calendar:googleID:)`. `Event { id, iCalUID, originalStart, title, time, kind, status, isRecurring, response, isOrganizer, attendeeCount, attendeeDomains, isFree, location, joinURL, htmlLink, description, colorKey, calendars }`. `attendeeDomains` holds the guests' email domains except the account holder's own address and rooms; month rule 4 needs it to tell outside guests from colleagues. `description` is plain text. Missing keys decode to defaults, so a cache written before a field existed still loads.
 - `CalendarSymbol { name, label }`: one of the 30 SF Symbols a calendar can wear (`all`, `named(_:)`), a closed set that exists on every supported system. `CalendarSymbolMap`: the person's choices by `CalendarID`, stored as sorted pairs in `calendar-symbols.json` (never in Google), with `symbol(for:)` for a calendar or an event, `nextEventSymbol(events:now:calendar:)`, `set`, `forget(_:)` and `read(from:)` / `write(to:)` on a `CacheDirectory`. A stored name outside the set reads as no symbol.
 - `ColorKey`: the 13 system colors. `ColorKey(hex:)` maps Google's hex by hue, with low chroma to gray and dark muted oranges to brown. Decoding uses it for events; the accounts list uses it for calendars. `Colors.swift` in the app turns a key into a SwiftUI `Color`.
-- Rule results (`RuleOutputs.swift`): `MonthMark`, `Summary { first, second }`, `NextEvents { current, next }`, `DayRow`, `WidgetEntry`, `RectangularLines`, `WhenLine`, `CircularContent`, `MenuBarLabel`.
+- Rule results (`RuleOutputs.swift`): `MonthMark`, `NextEvents { current, next }`, `DayRow`, `WidgetEntry`, `RectangularLines`, `WhenLine`, `CircularContent`, `MenuBarLabel`.
 - `WidgetSnapshot { fetchedAt, accountCount, signedOutAccounts, events }` (`Snapshot.swift`), the contents of `widget-snapshot.json`. Sync reads and writes the file (atomic replace, newer `fetchedAt` wins) in extensions of this type; it is declared once, here.
 - `DayLink`: `day://day/<yyyy-mm-dd>` and `day://event/<sub>/<calendar>/<event>`, every component percent-encoded because calendar IDs carry `#`, `@` and `+`. The widget builds these and the app's `onOpenURL` parses them with the same type.
 - `DayIdentifiers`: bundle IDs, App Group, URL scheme, widget kind, keychain service, refresh task, the client ID key and its placeholder.
@@ -73,7 +75,6 @@ Simulator builds are signed to run locally (no Apple account needed). That signa
 func merged(_ events: [Event]) -> [Event]
 func monthMark(_ event: Event, account: Account, calendar: CalendarInfo, in local: Calendar) -> MonthMark
 func coveredDays(_ event: Event, calendar: Calendar) -> ClosedRange<CivilDate>
-func summarize(day: CivilDate, events: [Event], now: Date, calendar: Calendar) -> Summary
 func nextEvents(events: [Event], now: Date, calendar: Calendar) -> NextEvents
 func joinableEvent(next: NextEvents, now: Date) -> Event?
 func dayRows(day: CivilDate, events: [Event], now: Date, calendar: Calendar) -> [DayRow]
@@ -87,11 +88,11 @@ What each shape carries, where it is not obvious:
 
 - `merged` keeps input order as the last tiebreak, so pass events in account order, first-added account first.
 - `monthMark` takes the reader's `Calendar`, because whether a timed event covers a second day (it must run past 05:00 there) depends on the zone. Rule 5, short internal one-offs as dots, is confirmed and is the single branch at the end of the function, so the month's density has one place to change.
-- `summarize` and `dayRows` want the day's events plus the next day's, which sentence two may name. `CalendarStore.dayEvents(_:)` returns exactly that.
+- `dayRows` wants the day's events plus the next day's. `CalendarStore.dayEvents(_:)` returns exactly that.
 - `DayRow` has `allDay(Event, position:)`, `allDayMore(String)` for `2 more`, `earlier([Event])` (its text is `Formatting.earlier`), `nowLine(Date)`, `event(Event, secondLine:showsJoin:)` and `gap(String, start:)`. Its `id` is stable across minutes, so the `List` animates inserts and removals only.
 - `WidgetEntry.url` is the inline and circular tap (today); `RectangularLines.url` is the rectangular tap (the event sheet). `WhenLine` carries the clock text, the start to render with `.reference(to:)` when within the hour, and the Always-On form. Line 3 is `RectangularLines.after`.
-- `MenuBarLabel` carries whether the symbol shows and the text, because the quiet state shows both.
-- Times are `H:mm` in 24-hour locales (`9:30`, `14:00`) and the system's own form in 12-hour ones. `Formatting` holds every such string: `clock`, `countdown`, `free`, `more`, `dayTime`, `until`, `signedOut` and `truncated` (the menu bar title, cut with an ellipsis).
+- `MenuBarLabel` carries whether the symbol shows and the text. The symbol shows alone, when nothing is ahead today; every other state is text, the time with the title only when the whole title is 8 characters or fewer.
+- Times are `H:mm` in 24-hour locales (`9:30`, `14:00`) and the system's own form in 12-hour ones. `Formatting` holds every such string: `clock`, `countdown`, `free`, `more`, `dayTime`, `weekdayTime`, `earlier`, `place` and `signedOut`.
 - `widgetTimeline` puts entries at every candidate start and end in the next 24 hours, at local midnight, an hour before each start (where `in 60 min` begins), and where the snapshot turns 2 and 24 hours old (`As of`, `Open to update`). Changes less than 5 minutes apart share one entry, at the later time.
 
 ## Stores
@@ -150,7 +151,7 @@ The Linux checkout has no Swift toolchain; everything builds on the Mac over SSH
 
 ```
 tools/sync.sh [NAME]                  copy the checkout to ~/build/NAME on the Mac (default day)
-tools/build.sh [NAME]                 sync, then xcodegen and build the Mac app and the iPhone app with its widget
+tools/build.sh [NAME]                 sync, then xcodegen and build the Mac app and the iPhone app, each with its widget
 tools/test.sh [NAME] [swift test args] sync, then swift test in Core
 tools/screenshots.sh [NAME] [parts]   sync, then picture every screen on the invented week into ~/artifacts/day
 ```
@@ -163,11 +164,11 @@ System components, SF Pro text styles, system colors and SF Symbols only. Zero `
 
 ## Screenshots
 
-`tools/screenshots.sh` pictures every screen the product has, on the invented week, in light and dark, and writes an `index.html` beside them, with what changed most recently first. Parts can run alone: `iphone`, `access`, `lock`, `widget`, `mac`, `icon`.
+`tools/screenshots.sh` pictures every screen the product has, on the invented week, in light and dark, and writes an `index.html` beside them, with what changed most recently first. Parts can run alone: `iphone`, `access`, `lock`, `widget`, `mac`, `macwidget`, `icon`.
 
 - `iphone`: the app in its own simulator (`DAY_SIM`, default `day-shots`, an iPhone 17 on iOS 27.2), launched with `-UseFixtures`, `-Now` and `-FixtureState` and driven by AXe through accessibility labels. The status bar shows the same clock as `-Now`. Symbols are chosen through the app's own picker at the end of each pass and removed after.
 - `access`: the same app at the largest accessibility text size and with Increase Contrast. The simulator has no switch for Reduce Transparency or the glass slider.
 - `icon`: `app/AppIcon.icon` rendered by Icon Composer's `ictool` in its six appearances.
 - `lock`: the three "Next" families added through the Lock Screen's own widget gallery, once per simulator, with symbols on both accounts' main calendars chosen through the app first, which is what makes WidgetKit reload. The widget reads the real clock and, while the client ID is the placeholder, the invented week moved to today, so its text is that week at this hour in Amsterdam.
-- `widget` and `mac` build `tools/shots/project.yml`, two renderers that compile the app's own view files and nothing new: `DayWidgetShots` draws the widget's views at the six times of the brief's table and in every state, including Always-On; `DayMacShots` draws the window, a popover, Go to Date, the menu bar label and panel and both Settings tabs into windows placed off every screen, so it runs on a locked Mac and shows nothing on the desktop. Glass and the window server's vibrancy are missing from those pictures: the day pane is drawn again on a flat ground, and switches and tinted text buttons draw in their inactive gray because the renderer is never the active app.
+- `widget`, `mac` and `macwidget` build `tools/shots/project.yml`, three renderers that compile the app's own view files and nothing new: `DayWidgetShots` draws the widget's views at the six times of the brief's table and in every state, including Always-On; `DayMacShots` draws the window, the first-run window, a popover, Go to Date, the menu bar label and panel and both Settings tabs into windows placed off every screen, so it runs on a locked Mac and shows nothing on the desktop; `DayMacWidgetShots` draws the desktop widget's three families side by side from `TodayProvider`, without a window, at six times of the invented Wednesday and in each state, and writes `timeline.txt` beside them. Glass and the window server's vibrancy are missing from those pictures: the day pane is drawn again on a flat ground, and switches and tinted text buttons draw in their inactive gray because the renderer is never the active app.
 
