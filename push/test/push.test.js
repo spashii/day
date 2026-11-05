@@ -568,7 +568,7 @@ describe("cleanup cron", () => {
   it("drops expired channels", async () => {
     const now = Date.now();
     await registerIphone({ channels: [{ id: "old", expiration: now - 1 }, { id: "live", expiration: now + 60_000 }] });
-    expect(await cleanup(env, now)).toBe(0);
+    expect((await cleanup(env, now)).forgotten).toBe(0);
     const channels = await env.DB.prepare("SELECT channel_id FROM channels").all();
     expect(channels.results.map((r) => r.channel_id)).toEqual(["live"]);
   });
@@ -587,7 +587,7 @@ describe("cleanup cron", () => {
     await env.DB.prepare("UPDATE installs SET last_seen = ? WHERE install_id = ?").bind(now - 30 * DAY - 1000, IPHONE).run();
     await env.DB.prepare("UPDATE installs SET last_seen = ? WHERE install_id = ?").bind(now - 29 * DAY, MAC).run();
 
-    expect(await cleanup(env, now)).toBe(1);
+    expect((await cleanup(env, now)).forgotten).toBe(1);
     expect(await installRow(IPHONE)).toBeNull();
     const iphoneChannels = await env.DB.prepare("SELECT * FROM channels WHERE install_id = ?").bind(IPHONE).all();
     expect(iphoneChannels.results).toHaveLength(0);
@@ -611,6 +611,7 @@ describe("cleanup cron", () => {
       COALESCER: {
         idFromName: (name) => name,
         get: () => ({
+          prune: async () => 0,
           forget: async () => {
             throw new Error("storage down");
           },
@@ -618,10 +619,85 @@ describe("cleanup cron", () => {
       },
     };
     vi.spyOn(console, "error").mockImplementation(() => {});
-    expect(await cleanup(failing, now)).toBe(0);
+    expect((await cleanup(failing, now)).forgotten).toBe(0);
     expect(await installRow(IPHONE)).not.toBeNull();
-    expect(await cleanup(env, now)).toBe(1);
+    expect((await cleanup(env, now)).forgotten).toBe(1);
     expect(await installRow(IPHONE)).toBeNull();
+  });
+
+  it("prunes old Lock Screen push times from every install's Durable Object and deletes empty lists", async () => {
+    const now = Date.now();
+    const iphoneToken = await registerIphone();
+    await registerMac();
+    // Lists written before the deletion alarm existed: times, and no alarm.
+    await seedWidgetSends(IPHONE, [130, 100, 70, 1]);
+    await seedWidgetSends(MAC, [200, 90]);
+    expect(await pendingAlarm(IPHONE)).toBeNull();
+
+    expect(await cleanup(env, now)).toEqual({ forgotten: 0, installs: 2, times: 5 });
+
+    // Only the time inside the hour is left, and the alarm is armed for its hour.
+    const kept = await storedWidgetSends(IPHONE);
+    expect(kept).toHaveLength(1);
+    expect(kept[0]).toBeGreaterThan(now - 2 * 60_000);
+    expect(await pendingAlarm(IPHONE)).toBe(kept[0] + HOUR);
+    // Nothing is left of an empty list, and no alarm either.
+    expect(await storedKeys(MAC)).toEqual([]);
+    expect(await pendingAlarm(MAC)).toBeNull();
+
+    // A second run finds nothing more to delete.
+    expect(await cleanup(env, now)).toEqual({ forgotten: 0, installs: 2, times: 0 });
+    expect(await storedWidgetSends(IPHONE)).toEqual(kept);
+
+    // A pending push keeps its window alarm and its install ID.
+    await seedWidgetSends(IPHONE, [130, 1]);
+    await notify(iphoneToken);
+    const window = await pendingAlarm(IPHONE);
+    expect(await cleanup(env, now)).toEqual({ forgotten: 0, installs: 2, times: 1 });
+    expect(await storedWidgetSends(IPHONE)).toHaveLength(1);
+    expect(await storedKeys(IPHONE)).toEqual(["install", "widgetPushes"]);
+    expect(await pendingAlarm(IPHONE)).toBe(window);
+    expect(apnsCalls).toHaveLength(0);
+  });
+
+  it("prunes the rest when one install's object fails, and leaves installs without send times alone", async () => {
+    const now = Date.now();
+    await registerIphone();
+    await registerMac();
+    await seedWidgetSends(MAC, [90, 80]);
+    const flaky = {
+      ...env,
+      COALESCER: {
+        idFromName: (name) => name,
+        get: (name) =>
+          name === IPHONE
+            ? {
+                prune: async () => {
+                  throw new Error("storage down");
+                },
+              }
+            : coalescer(name),
+      },
+    };
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await cleanup(flaky, now)).toEqual({ forgotten: 0, installs: 1, times: 2 });
+    expect(await storedKeys(MAC)).toEqual([]);
+
+    // An install with nothing stored stays with nothing stored.
+    expect(await cleanup(env, now)).toEqual({ forgotten: 0, installs: 2, times: 0 });
+    expect(await storedKeys(IPHONE)).toEqual([]);
+    expect(await pendingAlarm(IPHONE)).toBeNull();
+  });
+
+  it("walks every install, past one page", async () => {
+    const now = Date.now();
+    const ids = Array.from({ length: 205 }, (_, i) => `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`);
+    await env.DB.batch(
+      ids.map((id) =>
+        env.DB.prepare("INSERT INTO installs (install_id, platform, environment, last_seen) VALUES (?, 'macos', 'production', ?)").bind(id, now),
+      ),
+    );
+    expect(await cleanup(env, now)).toEqual({ forgotten: 0, installs: 205, times: 0 });
   });
 
   it("does not delete an install that registered after it was selected", async () => {
@@ -633,6 +709,7 @@ describe("cleanup cron", () => {
       COALESCER: {
         idFromName: (name) => name,
         get: (name) => ({
+          prune: async () => 0,
           forget: async () => {
             // The device checks in while the object is being cleared.
             await env.DB.prepare("UPDATE installs SET last_seen = ?").bind(now).run();

@@ -74,6 +74,29 @@ export class InstallCoalescer extends DurableObject {
     if (sends.length > 0) await storage.setAlarm(sends[0] + WIDGET_HOUR_MS);
   }
 
+  /**
+   * Deletes send times older than an hour, and the list once it is empty. The
+   * daily cleanup calls it for every install, so a list that was written before
+   * the deletion alarm existed, or whose alarm was lost, does not outlive its
+   * hour. Returns how many send times it deleted. A pending push keeps its
+   * alarm: that run prunes and re-arms on its own.
+   */
+  async prune(now = Date.now()) {
+    const storage = this.ctx.storage;
+    const stored = await storage.get(WIDGET_SENDS_KEY);
+    if (stored === undefined) return 0;
+    const sends = recentWidgetSends(stored, now);
+    if (sends.length < stored.length) {
+      if (sends.length > 0) await storage.put(WIDGET_SENDS_KEY, sends);
+      else await storage.delete(WIDGET_SENDS_KEY);
+    }
+    if ((await storage.get(INSTALL_KEY)) === undefined) {
+      if (sends.length > 0) await storage.setAlarm(sends[0] + WIDGET_HOUR_MS);
+      else await storage.deleteAlarm();
+    }
+    return stored.length - sends.length;
+  }
+
   /** Drops the pending push, the stored install ID and the send times. */
   async forget() {
     await this.ctx.storage.deleteAlarm();

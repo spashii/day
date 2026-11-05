@@ -87,7 +87,7 @@ The Durable Object keeps the send times (milliseconds since the epoch) of the ac
 
 This is what the privacy page promises, word for word:
 
-> For each device, Day's server keeps a random install ID, random IDs for its Google change notices with their expiry times, its Apple push addresses, the device type, whether it runs a test or release build, when it last checked in, and the times of its Lock Screen updates in the last hour. A device that hasn't checked in for 30 days is deleted. Nothing else.
+> For each device, Day's server keeps a random install ID, random IDs for its Google change notices with their expiry times, its Apple push addresses, the device type, whether it runs a test or release build, when it last checked in, and the times of its Lock Screen updates in the last hour. A device that hasn't checked in for 30 days is deleted, and drops out of the database's backups 30 days after that. Nothing else.
 
 Any new field the relay stores per device goes to the copy owner before it ships, so the privacy page stays true.
 
@@ -112,7 +112,7 @@ Each install's Durable Object holds the send times of its widget pushes from the
 
 Never stored or logged: calendar IDs, email addresses, Google tokens, event data, IP addresses, and when an install first registered. Last seen is kept only because the 30 day cleanup needs it.
 
-A cron at 03:17 UTC deletes expired channels, then every install that has not registered for 30 days, whether or not it still has channels, together with its channels and its Durable Object storage. It handles 40 installs a run and takes the rest on the next. An install whose Durable Object could not be cleared keeps its row, so the next run tries again.
+A cron at 03:17 UTC deletes expired channels, then every install that has not registered for 30 days, whether or not it still has channels, together with its channels and its Durable Object storage. It handles 40 installs a run and takes the rest on the next. An install whose Durable Object could not be cleared keeps its row, so the next run tries again. The same run then asks the Durable Object of every install in D1 to delete send times older than an hour, and its stored list once that is empty (`prune()`). The object's alarm already does this; the pass is the backstop for lists the alarm never covered, and it leaves a pending push's alarm alone. It walks D1 by install ID in pages of 100 and makes one Durable Object call per install, and Cloudflare caps the subrequests of one invocation, so past a few thousand installs it has to spread across runs the way the 40 install limit does.
 
 Workers observability is off on purpose: invocation logs record request details, and Google's headers carry the calendar ID. Do not turn it on, add Logpush or a tail consumer, or run `wrangler tail` on this Worker or on `app-updates`, because a tail shows each request's headers. The Worker's own log lines (an APNs failure reason, a storage failure name) carry nothing from the request.
 
@@ -141,4 +141,4 @@ npx wrangler d1 migrations apply day-push --remote    # only when migrations/ ch
 npx wrangler deploy
 ```
 
-The tests cover registration and the stored columns, token checks, channels an install no longer holds, coalescing, the widget push rate limit, deleting send times when they expire (alarm and write pruning, with the 3 second window intact), the push headers and payloads, the JWT signature, dropping dead tokens, deletion and the cron (30 days silent deletes the install, its channels and its Durable Object storage). The privacy test sends notifications carrying an email address in `X-Goog-Resource-URI` through the success path, a forged token, a channel the install does not hold, Apple refusing the push and storage failing, and fails if any log line, table row or Durable Object entry contains it.
+The tests cover registration and the stored columns, token checks, channels an install no longer holds, coalescing, the widget push rate limit, deleting send times when they expire (alarm and write pruning, with the 3 second window intact), the push headers and payloads, the JWT signature, dropping dead tokens, deletion and the cron (30 days silent deletes the install, its channels and its Durable Object storage, and the prune pass deletes old send times and empty lists in every install's object). The privacy test sends notifications carrying an email address in `X-Goog-Resource-URI` through the success path, a forged token, a channel the install does not hold, Apple refusing the push and storage failing, and fails if any log line, table row or Durable Object entry contains it.

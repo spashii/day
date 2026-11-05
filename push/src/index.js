@@ -17,6 +17,7 @@ const PUSH_TOKEN = /^[0-9a-f]{32,512}$/;
 const CHANNEL_ID = /^[A-Za-z0-9_+/=-]{1,64}$/; // Google's alphabet for channel IDs
 const STALE_INSTALL_MS = 30 * 24 * 60 * 60 * 1000;
 const MAX_FORGET_PER_RUN = 40;
+const PRUNE_PAGE = 100;
 
 export default {
   async fetch(request, env) {
@@ -197,10 +198,20 @@ export function parseRegistration(body) {
  * Drops expired channels, then every install that has not registered for 30
  * days, with its channels and its Durable Object storage. That is the retention
  * the privacy page promises, so it does not depend on the install's channels.
+ * Then every remaining install's Durable Object deletes the widget send times
+ * older than an hour (see pruneSendTimes). Returns what it did, as counts only.
+ */
+export async function cleanup(env, now) {
+  const forgotten = await forgetSilentInstalls(env, now);
+  const pruned = await pruneSendTimes(env, now);
+  return { forgotten, ...pruned };
+}
+
+/**
  * The Durable Object goes first: if clearing it fails, the install row stays and
  * the next run tries again, rather than leaving storage nothing points to.
  */
-export async function cleanup(env, now) {
+async function forgetSilentInstalls(env, now) {
   await env.DB.prepare("DELETE FROM channels WHERE expiry < ?").bind(now).run();
   const cutoff = now - STALE_INSTALL_MS;
   const { results } = await env.DB.prepare("SELECT install_id FROM installs WHERE last_seen < ? LIMIT ?")
@@ -224,6 +235,38 @@ export async function cleanup(env, now) {
     env.DB.prepare(`DELETE FROM installs WHERE last_seen < ? AND install_id IN (${marks})`).bind(cutoff, ...cleared),
   ]);
   return cleared.length;
+}
+
+/**
+ * Asks the Durable Object of every install in D1 to delete its widget send
+ * times older than an hour, and its stored list once it is empty. The object's
+ * own alarm does this as well; this pass is the backstop for lists the alarm
+ * never covered. One failing object does not stop the others, and the pass
+ * walks the table in pages by install ID. Cloudflare caps the subrequests of one
+ * invocation, and each install is one: past a few thousand installs this needs
+ * to spread across runs the way forgetSilentInstalls does. Returns the number
+ * of installs asked and of send times deleted.
+ */
+export async function pruneSendTimes(env, now) {
+  let installs = 0;
+  let times = 0;
+  let after = "";
+  for (;;) {
+    const { results } = await env.DB.prepare("SELECT install_id FROM installs WHERE install_id > ? ORDER BY install_id LIMIT ?")
+      .bind(after, PRUNE_PAGE)
+      .all();
+    if (results.length === 0) return { installs, times };
+    const outcomes = await Promise.allSettled(results.map(async (row) => coalescer(env, row.install_id).prune(now)));
+    for (const outcome of outcomes) {
+      if (outcome.status === "fulfilled") {
+        installs += 1;
+        times += outcome.value;
+      }
+    }
+    const failed = outcomes.find((outcome) => outcome.status === "rejected");
+    if (failed) console.error(`day-push: prune could not reach storage: ${failed.reason?.name ?? "Error"}`);
+    after = results[results.length - 1].install_id;
+  }
 }
 
 function coalescer(env, installId) {
