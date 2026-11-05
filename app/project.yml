@@ -16,7 +16,7 @@ settings:
     # The Google OAuth client (iOS type, no secret), without its .apps.googleusercontent.com
     # suffix. The placeholder keeps both apps on the invented fixture until a client exists;
     # the real value goes here and nowhere else.
-    DAY_GOOGLE_CLIENT_ID: 000000000000-placeholder
+    DAY_GOOGLE_CLIENT_ID: 894112264378-4hp182p15qf9k0o9k8ohe3j1l6dcqusa
     SWIFT_EMIT_LOC_STRINGS: YES
     LOCALIZATION_PREFERS_STRING_CATALOGS: YES
     DEAD_CODE_STRIPPING: YES
