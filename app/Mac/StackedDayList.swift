@@ -29,6 +29,7 @@ struct StackedDayList: View {
             let rows = dayRows(
                 day: day, events: store.dayEvents(day), now: store.now, calendar: store.calendar)
             let items = items(rows)
+            let ending = dayEnding(rows: rows, day: day, now: store.now, calendar: store.calendar)
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     if DayStateLines.isShown(in: store, isEmpty: items.isEmpty) {
@@ -40,6 +41,10 @@ struct StackedDayList: View {
                         if separated(item, in: items) {
                             Divider()
                         }
+                    }
+                    if ending == .nothingElse {
+                        DayEndingLine()
+                            .padding(.vertical, Spacing.cell)
                     }
                 }
                 .padding(.horizontal, Spacing.block)

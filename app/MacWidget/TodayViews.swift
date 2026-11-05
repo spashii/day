@@ -1,3 +1,4 @@
+import AppKit
 import DayCore
 import SwiftUI
 import WidgetKit
@@ -38,7 +39,13 @@ struct TodayFamilyView: View {
                 TodayLargeView(content: content)
             }
         }
+        .environment(\.todaySymbols, symbols)
         .widgetURL(url)
+    }
+
+    private var symbols: CalendarSymbolMap {
+        if case .day(let day) = content { return day.symbols }
+        return CalendarSymbolMap()
     }
 
     /// A click anywhere opens Day on the day shown: the small family's event's day (which is
@@ -67,7 +74,7 @@ struct TodaySmallView: View {
             if let next = day.next {
                 TodayNextView(next: next)
             } else {
-                TodayMessage(text: TodayContent.nothingScheduled)
+                TodayMessage(text: day.emptyMessage)
             }
         }
     }
@@ -85,7 +92,7 @@ struct TodayMediumView: View {
             VStack(alignment: .leading, spacing: Spacing.cell) {
                 let layouts = day.mediumLayouts
                 if layouts.isEmpty {
-                    TodayMessage(text: TodayContent.nothingScheduled)
+                    TodayMessage(text: day.emptyMessage)
                 } else {
                     TodayFitting(layouts: layouts, calendar: day.calendar)
                 }
@@ -111,7 +118,7 @@ struct TodayLargeView: View {
                     .lineLimit(1)
                     .accessibilityAddTraits(.isHeader)
                 if day.allDay.isEmpty, day.ended.isEmpty, day.ahead.isEmpty {
-                    TodayMessage(text: TodayContent.nothingScheduled)
+                    TodayMessage(text: day.emptyMessage)
                 } else {
                     TodayFitting(layouts: day.largeLayouts, calendar: day.calendar)
                 }
@@ -159,11 +166,14 @@ struct TodayRowView: View {
     var body: some View {
         switch row {
         case .allDay(let event, let position):
-            Text(verbatim: position.map { "\(event.title), \($0)" } ?? event.title)
-                .font(.subheadline)
-                .foregroundStyle(event.onHolidayCalendar ? .secondary : .primary)
-                .lineLimit(1)
-                .privacySensitive()
+            HStack(alignment: .firstTextBaseline, spacing: Spacing.row) {
+                TodaySymbol(event: event)
+                Text(verbatim: position.map { "\(event.title), \($0)" } ?? event.title)
+                    .font(.subheadline)
+                    .foregroundStyle(event.onHolidayCalendar ? .secondary : .primary)
+                    .lineLimit(1)
+                    .privacySensitive()
+            }
         case .allDayMore(let text):
             TodayLine(text: text)
         case .earlier(let events):
@@ -173,6 +183,12 @@ struct TodayRowView: View {
             TodayEventRow(event: event, secondLine: nil, past: true, calendar: calendar)
         case .event(let event, let secondLine):
             TodayEventRow(event: event, secondLine: secondLine, calendar: calendar)
+        case .nothingElse(let text):
+            Text(verbatim: text)
+                .font(.body)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
         case .gap(let text, _), .more(let text):
             // Aligned with the titles, as the Day list's gap rows are.
             HStack(spacing: Spacing.cell) {
@@ -193,6 +209,8 @@ struct TodayEventRow: View {
     var past = false
     let calendar: Calendar
 
+    @Environment(\.todaySymbols) private var symbols
+
     var body: some View {
         let start = Formatting.time(event.time.start(in: calendar), calendar: calendar)
         let end = Formatting.time(event.time.end(in: calendar), calendar: calendar)
@@ -209,12 +227,15 @@ struct TodayEventRow: View {
             }
             TodayRule(color: event.markColor)
             VStack(alignment: .leading, spacing: 0) {
-                Text(event.title)
-                    .font(.body)
-                    .fontWeight(event.isRecurring ? .regular : .semibold)
-                    .foregroundStyle(past ? .secondary : .primary)
-                    .lineLimit(1)
-                    .privacySensitive()
+                HStack(alignment: .firstTextBaseline, spacing: Spacing.row) {
+                    TodaySymbol(event: event, past: past)
+                    Text(event.title)
+                        .font(.body)
+                        .fontWeight(event.isRecurring ? .regular : .semibold)
+                        .foregroundStyle(past ? .secondary : .primary)
+                        .lineLimit(1)
+                        .privacySensitive()
+                }
                 if let secondLine {
                     Text(verbatim: secondLine)
                         .font(.subheadline)
@@ -228,8 +249,12 @@ struct TodayEventRow: View {
         .fixedSize(horizontal: false, vertical: true)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(
-            Text(verbatim: [event.title, "\(start) to \(end)", secondLine].compactMap { $0 }
+            Text(verbatim: [event.title, "\(start) to \(end)", secondLine, symbolLabel].compactMap { $0 }
                 .joined(separator: ", ")))
+    }
+
+    private var symbolLabel: String? {
+        symbols.symbol(for: event).flatMap { $0.isDrawableOnMac ? $0.label : nil }
     }
 }
 
@@ -242,10 +267,14 @@ struct TodayNextView: View {
         HStack(alignment: .top, spacing: Spacing.cell) {
             TodayRule(color: next.event.markColor)
             VStack(alignment: .leading, spacing: Spacing.row) {
-                when
-                    .font(.subheadline)
-                    .monospacedDigit()
-                    .lineLimit(1)
+                // The title wraps over three lines, so the symbol leads the line above it.
+                HStack(alignment: .firstTextBaseline, spacing: Spacing.row) {
+                    TodaySymbol(event: next.event)
+                    when
+                        .font(.subheadline)
+                        .monospacedDigit()
+                        .lineLimit(1)
+                }
                 Text(next.event.title)
                     .font(.title2)
                     .fontWeight(next.event.isRecurring ? .regular : .semibold)
@@ -268,6 +297,58 @@ struct TodayNextView: View {
     private var when: Text {
         guard let end = next.end else { return Text(verbatim: next.start) }
         return Text("\(Text(verbatim: next.start)) to \(Text(verbatim: end).foregroundStyle(.secondary))")
+    }
+}
+
+/// The symbols the person gave their calendars, for the rows of the family being drawn.
+private struct TodaySymbolsKey: EnvironmentKey {
+    static var defaultValue: CalendarSymbolMap { CalendarSymbolMap() }
+}
+
+extension EnvironmentValues {
+    var todaySymbols: CalendarSymbolMap {
+        get { self[TodaySymbolsKey.self] }
+        set { self[TodaySymbolsKey.self] = newValue }
+    }
+}
+
+extension CalendarSymbol {
+    /// Whether this system can draw the symbol; one it cannot would leave an empty space.
+    var isDrawableOnMac: Bool {
+        NSImage(systemSymbolName: name, accessibilityDescription: nil) != nil
+    }
+}
+
+/// The symbol of an event's calendar, small, leading its title or time. Nothing when the
+/// calendar has none, so that row is as it was.
+///
+/// Drawn in the calendar's color in the full-color style. The dimmed, accented and clear styles
+/// drop every color, and a dark calendar color would then all but vanish, so outside full
+/// color the symbol is primary, as the title is, and joins the accent group as the rule does:
+/// the tint sets it apart from the text, and it stays visible when the color is gone. An
+/// ended event's symbol is secondary, like its title. The symbol is private with the title,
+/// because it says what kind of event is coming.
+struct TodaySymbol: View {
+    let event: Event
+    var past = false
+
+    @Environment(\.todaySymbols) private var symbols
+    @Environment(\.widgetRenderingMode) private var renderingMode
+
+    var body: some View {
+        if let symbol = symbols.symbol(for: event), symbol.isDrawableOnMac {
+            Image(systemName: symbol.name)
+                .font(.subheadline)
+                .foregroundStyle(style)
+                .widgetAccentable()
+                .privacySensitive()
+                .accessibilityHidden(true)
+        }
+    }
+
+    private var style: AnyShapeStyle {
+        if past { return AnyShapeStyle(.secondary) }
+        return renderingMode == .fullColor ? AnyShapeStyle(event.markColor) : AnyShapeStyle(.primary)
     }
 }
 

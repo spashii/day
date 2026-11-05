@@ -3,7 +3,8 @@ import SwiftUI
 
 /// One day as a plain system `List`: the all-day lines, the Earlier row, the now line, the
 /// event rows and the gap rows, with a state line above them only when there is one to say
-/// (loading, nothing scheduled, offline, signed out). The iPhone Day, the Mac day pane and
+/// (loading, nothing scheduled, offline, signed out), and `Nothing else today.` under them
+/// once today's last event has ended. The iPhone Day, the Mac day pane and
 /// the Mac menu bar panel all draw it, so there is one day design.
 ///
 /// It redraws every minute inside `TimelineView`, reading the time from the store, so a
@@ -34,7 +35,8 @@ struct DayList: View {
         TimelineView(.everyMinute) { _ in
             let now = store.now
             let rows = dayRows(day: day, events: store.dayEvents(day), now: now, calendar: store.calendar)
-            list(items(rows))
+            let ending = dayEnding(rows: rows, day: day, now: now, calendar: store.calendar)
+            list(items(rows), ending: ending)
         }
         #if os(iOS)
             .sheet(item: presentedEvent) { event in
@@ -46,12 +48,12 @@ struct DayList: View {
     }
 
     @ViewBuilder
-    private func list(_ items: [Item]) -> some View {
+    private func list(_ items: [Item], ending: DayEnding?) -> some View {
         // The system list, plain, with its own insets and separators. Only the minimum row
         // height goes, so the now line and the gap rows are lines rather than 44 pt rows.
         #if os(macOS)
             List(selection: selectionBinding) {
-                content(items)
+                content(items, ending: ending)
             }
             .listStyle(.plain)
             // One point, not zero: AppKit's table refuses a zero row height and logs an
@@ -59,7 +61,7 @@ struct DayList: View {
             .environment(\.defaultMinListRowHeight, 1)
         #else
             List {
-                content(items)
+                content(items, ending: ending)
             }
             .listStyle(.plain)
             .environment(\.defaultMinListRowHeight, 0)
@@ -67,7 +69,7 @@ struct DayList: View {
     }
 
     @ViewBuilder
-    private func content(_ items: [Item]) -> some View {
+    private func content(_ items: [Item], ending: DayEnding?) -> some View {
         if showsHeader {
             #if os(macOS)
                 Text(verbatim: Formatting.dayHeader(day, calendar: store.calendar))
@@ -103,6 +105,14 @@ struct DayList: View {
                 .modifier(LastRow(isLast: item.id == items.last?.id))
         }
         .listRowInsets(.horizontal, margin)
+        // After the last event of today, under whatever the day still shows.
+        if ending == .nothingElse {
+            DayEndingLine()
+                .listRowSeparator(.hidden)
+                .listRowInsets(.vertical, Spacing.cell)
+                .listRowInsets(.horizontal, margin)
+                .selectionDisabled()
+        }
     }
 
     @ViewBuilder

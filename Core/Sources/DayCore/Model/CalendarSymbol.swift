@@ -114,6 +114,17 @@ public struct CalendarSymbolMap: Codable, Hashable, Sendable {
         return symbol(for: next)
     }
 
+    /// The symbol that leads the Mac menu bar label: the calendar of the event the label's
+    /// text is about (`menuBarEvent`). Nil when the label is the `calendar` symbol alone, or
+    /// that calendar has no symbol, which leaves the text as it is.
+    public func menuBarSymbol(
+        next: NextEvents, now: Date, calendar: Calendar
+    ) -> CalendarSymbol? {
+        guard !isEmpty, let event = menuBarEvent(next: next, now: now, calendar: calendar)
+        else { return nil }
+        return symbol(for: event)
+    }
+
     /// Sets the calendar's symbol; nil goes back to the color dot.
     public mutating func set(_ symbol: CalendarSymbol?, for calendar: CalendarID) {
         assigned[calendar] = symbol?.name

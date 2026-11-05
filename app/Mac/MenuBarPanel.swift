@@ -13,15 +13,19 @@ import SwiftUI
 /// - After the last event, or nothing today: the `calendar` symbol alone.
 ///
 /// A title of 8 characters or fewer joins the text (`14:00 Standup`); a longer one is left
-/// out, never cut.
+/// out, never cut. When the calendar of the event the text is about has a symbol, it leads
+/// the text (`[symbol] 9:30`); with none set the label is the text alone.
 struct MenuBarLabelView: View {
     @EnvironmentStore private var store
+    @EnvironmentSymbols private var symbols
 
     var body: some View {
-        let label = current
+        let (label, symbol) = current
         HStack(spacing: Spacing.row) {
             if label.showsSymbol {
                 Image(systemName: "calendar")
+            } else if let symbol {
+                Image(systemName: symbol.name)
             }
             if let text = label.text {
                 Text(verbatim: text)
@@ -29,16 +33,24 @@ struct MenuBarLabelView: View {
             }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text(verbatim: label.text.map { "Day, \($0)" } ?? "Day"))
+        .accessibilityLabel(
+            Text(
+                verbatim: label.text.map { text in
+                    "Day, " + (symbol.map { "\($0.label), " } ?? "") + text
+                } ?? "Day"))
     }
 
-    private var current: MenuBarLabel {
+    private var current: (MenuBarLabel, CalendarSymbol?) {
         let now = store.now
         let calendar = store.calendar
         let today = CivilDate(now, in: calendar)
         let next = nextEvents(
             events: store.events(in: today...today.adding(days: 8)), now: now, calendar: calendar)
-        return menuBarLabel(next: next, now: now, calendar: calendar)
+        let symbol = symbols.map.menuBarSymbol(next: next, now: now, calendar: calendar)
+        return (
+            menuBarLabel(next: next, now: now, calendar: calendar),
+            symbol.flatMap { $0.isDrawable ? $0 : nil }
+        )
     }
 }
 

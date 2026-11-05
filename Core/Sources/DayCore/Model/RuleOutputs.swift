@@ -148,6 +148,15 @@ public enum CircularContent: Hashable, Sendable {
     case symbol
 }
 
+/// What a day says when no event is left to come.
+public enum DayEnding: Hashable, Sendable {
+    /// The day had nothing at all: no all-day line and no timed event, ended or not.
+    case nothingScheduled
+    /// Today had events, all-day ones included, and none is left to start or to end. The Day
+    /// list keeps the all-day lines and the Earlier row above it.
+    case nothingElse
+}
+
 /// The Mac menu bar item's label.
 public struct MenuBarLabel: Hashable, Sendable {
     /// Draw the `calendar` symbol before the text. Only the symbol-alone state does: a label

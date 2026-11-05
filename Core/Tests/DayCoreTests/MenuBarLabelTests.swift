@@ -104,6 +104,42 @@ struct MenuBarLabelTests {
         #expect(label(busy, "2026-11-04 09:00").text == "14:00 Busy")
     }
 
+    @Test func theSymbolBelongsToTheEventTheTextIsAbout() {
+        let work = TestData.workCalendar.id
+        let personal = TestData.personalCalendar.id
+        var map = CalendarSymbolMap()
+        map.set(CalendarSymbol.named("briefcase"), for: work)
+        map.set(CalendarSymbol.named("house"), for: personal)
+        let events = [
+            TestData.event("Standup", "2026-11-04 09:30", "2026-11-04 10:00"),
+            TestData.event("Dentists", "2026-11-04 11:00", "2026-11-04 12:00", account: TestData.personal),
+        ]
+        func symbol(_ now: String) -> String? {
+            let at = TestData.date(now)
+            return map.menuBarSymbol(
+                next: nextEvents(events: events, now: at, calendar: calendar), now: at, calendar: calendar)?.name
+        }
+        // "9:30 Standup", "Standup in 12 min", "Standup, 17 min left": the work calendar's.
+        #expect(symbol("2026-11-04 07:00") == "briefcase")
+        #expect(symbol("2026-11-04 09:18") == "briefcase")
+        #expect(symbol("2026-11-04 09:43") == "briefcase")
+        // Standup is over: the label names the Dentists, whose calendar has its own.
+        #expect(symbol("2026-11-04 10:30") == "house")
+        // After the last event the label is the calendar symbol alone, and nothing leads it.
+        #expect(symbol("2026-11-04 12:30") == nil)
+    }
+
+    @Test func noSymbolSetLeavesTheLabelAlone() {
+        let events = [TestData.event("Standup", "2026-11-04 09:30", "2026-11-04 10:00")]
+        let at = TestData.date("2026-11-04 07:00")
+        let next = nextEvents(events: events, now: at, calendar: calendar)
+        #expect(CalendarSymbolMap().menuBarSymbol(next: next, now: at, calendar: calendar) == nil)
+        var other = CalendarSymbolMap()
+        other.set(CalendarSymbol.named("house"), for: TestData.personalCalendar.id)
+        #expect(other.menuBarSymbol(next: next, now: at, calendar: calendar) == nil)
+        #expect(menuBarLabel(next: next, now: at, calendar: calendar).text == "9:30 Standup")
+    }
+
     @Test func theInventedWednesday() throws {
         let events = try TestData.inventedEvents()
         func at(_ time: String) -> MenuBarLabel {

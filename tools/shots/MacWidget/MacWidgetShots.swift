@@ -13,7 +13,10 @@ import WidgetKit
 /// margins drawn here, since only WidgetKit draws a widget's container. The desktop's dimmed
 /// (vibrant) and accented styles are composited by the system and cannot be rendered here;
 /// the "without color" pictures stand in for them by dropping the background and every color,
-/// which is the part of those styles the layout has to survive.
+/// which is the part of those styles the layout has to survive. The accented and clear looks
+/// go one step further and set the accented rendering mode, but WidgetKit alone puts the accent
+/// group (`widgetAccentable`) in the tint, so there too the symbols and rules are seen
+/// without it: what these pictures prove is that nothing relies on color to be seen.
 @main
 struct MacWidgetShots {
     @MainActor static func main() {
@@ -44,10 +47,13 @@ struct Shots {
         var signedOut = 0
         var accounts: Int? = nil
         var events: [Event]? = nil
+        /// Whether the invented calendar symbols are chosen: the work calendar, the personal
+        /// one and the birthdays wear one, the holidays do not.
+        var symbols = false
     }
 
     enum Look: String, CaseIterable {
-        case light, dark, dimmed
+        case light, dark, dimmed, accented, clear
 
         var scheme: ColorScheme { self == .light ? .light : .dark }
     }
@@ -59,6 +65,13 @@ struct Shots {
                 Row(
                     file: "today-\(clock.replacingOccurrences(of: ":", with: ""))",
                     caption: "Wednesday \(clock), the invented week", clock: clock))
+        }
+        for clock in ["09:20", "12:10", "17:30"] {
+            rows.append(
+                Row(
+                    file: "symbols-\(clock.replacingOccurrences(of: ":", with: ""))",
+                    caption: "Wednesday \(clock) with calendar symbols chosen", clock: clock,
+                    symbols: true))
         }
         rows.append(
             Row(
@@ -75,7 +88,11 @@ struct Shots {
         var done: [String] = []
         for row in rows {
             let content = entry(for: row).content
-            for look in Look.allCases where look == .light || look == .dark || row.file.hasPrefix("today") {
+            for look in Look.allCases
+            where look == .light || look == .dark
+                || (look == .dimmed && (row.file.hasPrefix("today") || row.symbols))
+                || ((look == .accented || look == .clear) && row.symbols)
+            {
                 let file = "\(row.file)-\(look.rawValue).png"
                 let view = FamiliesRow(content: content, look: look)
                 if write(view, to: file) {
@@ -97,6 +114,8 @@ struct Shots {
         case .light: "light"
         case .dark: "dark"
         case .dimmed: "without color or background, standing in for the dimmed and accented styles"
+        case .accented: "accented rendering mode on a dark desktop, without color or background (the system's tint is not drawn here)"
+        case .clear: "clear style over a wallpaper, without color (the system's glass and tint are not drawn here)"
         }
     }
 
@@ -116,7 +135,24 @@ struct Shots {
         let snapshot = WidgetSnapshot(
             fetchedAt: now.addingTimeInterval(-row.age), accountCount: accounts,
             signedOutAccounts: row.signedOut, events: row.events ?? baseEvents)
-        return TodayProvider.entries(.found(snapshot), now: now, calendar: Self.fixture.calendar)[0]
+        return TodayProvider.entries(
+            .found(snapshot, symbols: row.symbols ? inventedSymbols : CalendarSymbolMap()), now: now,
+            calendar: Self.fixture.calendar)[0]
+    }
+
+    /// Symbols for three of the fixture's calendars; the holidays are left on their rule alone.
+    private var inventedSymbols: CalendarSymbolMap {
+        var map = CalendarSymbolMap()
+        let chosen = [
+            ("you@acme.com", "briefcase"), ("you@gmail.com", "house"),
+            ("addressbook#contacts@group.v.calendar.google.com", "birthday.cake"),
+        ]
+        for calendar in Self.fixture.calendars {
+            if let name = chosen.first(where: { $0.0 == calendar.id.googleID })?.1 {
+                map.set(CalendarSymbol.named(name), for: calendar.id)
+            }
+        }
+        return map
     }
 
     private var baseEvents: [Event] {
@@ -246,14 +282,33 @@ private struct FamiliesRow: View {
                 .environment(\.widgetRenderingMode, .vibrant)
                 .grayscale(1)
                 .background(.white.opacity(0.08), in: .rect(cornerRadius: 22, style: .continuous))
+        case .accented:
+            face
+                .environment(\.widgetRenderingMode, .accented)
+                .grayscale(1)
+                .background(.white.opacity(0.14), in: .rect(cornerRadius: 22, style: .continuous))
+        case .clear:
+            face
+                .environment(\.widgetRenderingMode, .accented)
+                .grayscale(1)
+                .background(.white.opacity(0.22), in: .rect(cornerRadius: 22, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .strokeBorder(.white.opacity(0.35), lineWidth: 1))
         }
     }
 
-    private var ground: Color {
+    @ViewBuilder
+    private var ground: some View {
         switch look {
         case .light: Color(white: 0.86)
         case .dark: Color(white: 0.12)
         case .dimmed: Color(red: 0.22, green: 0.27, blue: 0.36)
+        case .accented: Color(red: 0.16, green: 0.20, blue: 0.30)
+        case .clear:
+            LinearGradient(
+                colors: [Color(red: 0.95, green: 0.62, blue: 0.40), Color(red: 0.30, green: 0.35, blue: 0.62)],
+                startPoint: .topLeading, endPoint: .bottomTrailing)
         }
     }
 }

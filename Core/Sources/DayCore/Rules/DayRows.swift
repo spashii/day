@@ -64,6 +64,32 @@ public func dayRows(day: CivilDate, events: [Event], now: Date, calendar: Calend
     return rows
 }
 
+/// What `day` says when it has no event left to come, from the rows `dayRows` returned for it.
+/// An all-day line counts as an event, so a day with only one is not a day with nothing.
+///
+/// - No rows: `nothingScheduled`.
+/// - Today, with rows but no event in progress or still to come: `nothingElse`. It stands
+///   under the all-day lines and the Earlier row, whether or not there is an all-day line.
+/// - Anything else: nil. A later day is its own list, and "today" would be wrong for it.
+public func dayEnding(rows: [DayRow], day: CivilDate, now: Date, calendar: Calendar) -> DayEnding? {
+    var hasEvents = false
+    var hasMoreToCome = false
+    for row in rows {
+        switch row {
+        case .allDay, .allDayMore, .earlier:
+            hasEvents = true
+        case .event:
+            hasEvents = true
+            hasMoreToCome = true
+        case .nowLine, .gap:
+            break
+        }
+    }
+    guard hasEvents else { return .nothingScheduled }
+    guard !hasMoreToCome, CivilDate(now, in: calendar) == day else { return nil }
+    return .nothingElse
+}
+
 /// The one unusual thing about a row, first match: `ends in 25 min` while in progress,
 /// `in 20 min` within the hour before the start, `No reply yet` on an unanswered one-off with
 /// other guests, the first line of a physical location. Never the meeting service.

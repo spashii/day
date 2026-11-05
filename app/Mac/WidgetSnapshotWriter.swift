@@ -53,22 +53,45 @@ enum MacWidgetGroup {
     }
 }
 
-/// Copies the app's widget snapshot into the App Group after a refresh, then asks WidgetKit
-/// to rebuild the desktop widget's timelines only when the copy changed what it shows.
+/// Copies the app's widget snapshot and its calendar symbols into the App Group after a
+/// refresh, then asks WidgetKit to rebuild the desktop widget's timelines only when a copy
+/// changed what it shows.
 ///
 /// The engine already writes `widget-snapshot.json` beside the app's cache after every
 /// refresh, toggle and removal, with the newer-wins rule; this mirrors that file. The group
 /// has no other writer (the Mac widget never reads Google), so the copy follows the app's
-/// exactly, a calendar hidden a moment ago included.
+/// exactly, a calendar hidden a moment ago included. `calendar-symbols.json` goes beside it
+/// under the same name, as on iPhone, where the Lock Screen widget reads the app's own copy.
 @MainActor
 enum WidgetSnapshotWriter {
-    /// Publishes `snapshot`, the one the engine left on disk. Nil, or a build that may not use
-    /// the group, does nothing.
-    static func publish(_ snapshot: WidgetSnapshot?) {
-        guard let snapshot, let group = MacWidgetGroup.cache() else { return }
-        publish(snapshot, to: group) {
+    /// Publishes `snapshot`, the one the engine left on disk, and `symbols`, the ones the
+    /// person has chosen. A build that may not use the group does nothing; a nil snapshot
+    /// still publishes the symbols.
+    static func publish(_ snapshot: WidgetSnapshot?, symbols: CalendarSymbolMap) {
+        guard let group = MacWidgetGroup.cache() else { return }
+        var changed = publish(symbols: symbols, to: group)
+        if let snapshot {
+            publish(snapshot, to: group) { changed = true }
+        }
+        if changed {
             WidgetCenter.shared.reloadAllTimelines()
         }
+    }
+
+    /// Publishes a symbol the person just chose, which no refresh is waiting to carry.
+    static func publish(symbols: CalendarSymbolMap) {
+        guard let group = MacWidgetGroup.cache() else { return }
+        if publish(symbols: symbols, to: group) {
+            WidgetCenter.shared.reloadAllTimelines()
+        }
+    }
+
+    /// Writes `symbols` into `group` unless the same ones are there. Returns whether the file
+    /// changed. With no symbol chosen and no file, nothing is written at all.
+    @discardableResult
+    static func publish(symbols: CalendarSymbolMap, to group: CacheDirectory) -> Bool {
+        guard CalendarSymbolMap.read(from: group) != symbols else { return false }
+        return (try? symbols.write(to: group)) != nil
     }
 
     /// Writes `snapshot` into `group` unless the same one is there, and calls `reload` when

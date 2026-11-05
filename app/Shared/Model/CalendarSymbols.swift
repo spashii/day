@@ -13,8 +13,9 @@ import SwiftUI
 ///
 /// Chosen on this device and kept in `calendar-symbols.json` in the shared folder, never in
 /// Google. On iPhone that folder is the App Group container, so the Lock Screen widget reads
-/// the same file; choosing a symbol asks WidgetKit to redraw it. A calendar with no symbol
-/// wears its color dot.
+/// the same file; choosing a symbol asks WidgetKit to redraw it. On the Mac the folder is the
+/// app's own, so a copy of the file goes to the App Group for the desktop widget
+/// (`WidgetSnapshotWriter`). A calendar with no symbol wears its color dot.
 ///
 /// A single `shared` instance serves the whole app, so views need no injection; previews and
 /// screenshots hand a private in-memory one to the environment instead, which writes nothing.
@@ -73,6 +74,9 @@ final class CalendarSymbols {
         try? next.write(to: cache)
         #if os(iOS)
             WidgetCenter.shared.reloadTimelines(ofKind: DayIdentifiers.widgetKind)
+        #else
+            // The desktop widget cannot read the app's folder, so it gets its own copy.
+            WidgetSnapshotWriter.publish(symbols: next)
         #endif
     }
 }

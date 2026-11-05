@@ -38,6 +38,15 @@ public func menuBarLabel(next: NextEvents, now: Date, calendar: Calendar) -> Men
         showsSymbol: false, text: shortTitle(upcoming).map { "\(time) \($0)" } ?? time)
 }
 
+/// The event the label's text is about, which is also the one whose calendar symbol leads the
+/// label: the event in progress when the label counts down to its end, else the one it counts
+/// to or names the start of. Nil for the calendar symbol alone.
+public func menuBarEvent(next: NextEvents, now: Date, calendar: Calendar) -> Event? {
+    guard menuBarLabel(next: next, now: now, calendar: calendar).text != nil else { return nil }
+    if let current = next.current, case .timed = current.time { return current }
+    return next.next
+}
+
 /// The most characters a title may have and still join the label.
 private let titleLimit = 8
 

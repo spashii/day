@@ -543,7 +543,7 @@ final class AppModel: CalendarStore {
     /// widget to read either.
     private func reloadWidgetsIfNeeded(_ snapshot: WidgetSnapshot?) {
         #if os(macOS)
-            WidgetSnapshotWriter.publish(snapshot)
+            WidgetSnapshotWriter.publish(snapshot, symbols: CalendarSymbols.shared.map)
         #endif
         guard let snapshot, snapshot.needsReload(after: reloadedFor) else { return }
         reloadedFor = snapshot
@@ -650,8 +650,10 @@ struct SignInFailure: LocalizedError, Equatable {
             // Its own description is a plain sentence; the status is in the log already.
             return error
         case let error as URLError:
-            // The system's own reason, as in `The Internet connection appears to be offline.`
-            return SignInFailure(line: "Couldn't sign in to Google: \(error.localizedDescription)")
+            // The system's reason (`The Internet connection appears to be offline.`) is for
+            // the log; the person gets the one sentence that says what to do.
+            log.error("sign-in could not reach Google: \(error.localizedDescription, privacy: .public)")
+            return SignInFailure(line: "Couldn't reach Google. Check your connection and try again.")
         default:
             log.error("sign-in failed: \(String(describing: error), privacy: .public)")
             return SignInFailure(line: unfinished)
@@ -664,9 +666,13 @@ struct SignInFailure: LocalizedError, Equatable {
             return CancellationError()
         case .differentAccount(let email):
             let expected = repairing?.email ?? "the account"
-            return SignInFailure(line: "You chose \(email) instead of \(expected).")
+            return SignInFailure(
+                line: "You chose \(email). Choose \(expected) to sign this account back in.")
         case .partialGrant:
-            return SignInFailure(line: "Day needs access to your calendars.")
+            return SignInFailure(
+                line:
+                    "Day didn't get access to your calendars. Try again and leave the calendar box checked."
+            )
         case .clientRejected(let code):
             log.error("Google refused the client: \(code, privacy: .public)")
             return SignInFailure(line: noClient)

@@ -40,6 +40,18 @@ struct TodayDay: Hashable, Sendable {
     var status: String?
     /// `day://day/<today>`.
     var url: URL
+    /// What the day says when no event is left to come: `Nothing scheduled` for a day with
+    /// nothing at all, `Nothing else today` once the last event has ended (an all-day line
+    /// is an event). Nil while something is still to come.
+    var ending: DayEnding?
+    /// The symbols the person gave their calendars, which lead the rows. Empty for none.
+    var symbols: CalendarSymbolMap = CalendarSymbolMap()
+
+    /// The line the small family and an empty medium family write: the day's ending, and
+    /// `Nothing scheduled` where the day has none to name.
+    var emptyMessage: String {
+        ending == .nothingElse ? TodayContent.nothingElse : TodayContent.nothingScheduled
+    }
 }
 
 /// The small family's event.
@@ -63,6 +75,8 @@ enum TodayRow: Hashable, Sendable, Identifiable {
     /// An event that has ended, dimmed.
     case past(Event)
     case event(Event, secondLine: String?)
+    /// `Nothing else today`, under the rows of a day whose last event has ended.
+    case nothingElse(String)
     /// `1 h free`, `Free until 16:00`.
     case gap(String, start: Date)
     /// `2 more`: events cut off at the bottom for lack of room.
@@ -73,6 +87,7 @@ enum TodayRow: Hashable, Sendable, Identifiable {
         case allDayMore
         case earlier
         case event(EventID)
+        case nothingElse
         case gap(Date)
         case more
     }
@@ -83,6 +98,7 @@ enum TodayRow: Hashable, Sendable, Identifiable {
         case .allDayMore: .allDayMore
         case .earlier: .earlier
         case .past(let event), .event(let event, _): .event(event.id)
+        case .nothingElse: .nothingElse
         case .gap(_, let start): .gap(start)
         case .more: .more
         }
@@ -100,6 +116,9 @@ extension TodayContent {
     static let openToUpdate = "Open to update"
     /// The copy decision for the desktop widget's empty state.
     static let nothingScheduled = "Nothing scheduled"
+    /// The copy decision for a day whose last event has ended; the Day list writes it with a
+    /// period.
+    static let nothingElse = "Nothing else today"
 
     /// Past this age no family names an event, as on the Lock Screen, and a click opens the
     /// app, which refreshes and writes a new snapshot. The Lock Screen's thresholds live in
@@ -110,7 +129,8 @@ extension TodayContent {
 
     /// The content at `t` for a snapshot's events, fetched at `fetchedAt`.
     static func at(
-        _ t: Date, events: [Event], fetchedAt: Date, signedOutAccounts: Int, calendar: Calendar
+        _ t: Date, events: [Event], fetchedAt: Date, signedOutAccounts: Int, calendar: Calendar,
+        symbols: CalendarSymbolMap = CalendarSymbolMap()
     ) -> TodayContent {
         let today = CivilDate(t, in: calendar)
         let url = DayLink.day(today).url
@@ -123,7 +143,8 @@ extension TodayContent {
         var allDay: [TodayRow] = []
         var ended: [Event] = []
         var ahead: [TodayRow] = []
-        for row in dayRows(day: today, events: events, now: t, calendar: calendar) {
+        let rows = dayRows(day: today, events: events, now: t, calendar: calendar)
+        for row in rows {
             switch row {
             case .allDay(let event, let position):
                 allDay.append(.allDay(event, position: position))
@@ -158,7 +179,9 @@ extension TodayContent {
             TodayDay(
                 day: today, calendar: calendar,
                 next: next(at: t, events: events, calendar: calendar),
-                allDay: allDay, ended: ended, ahead: ahead, status: status, url: url))
+                allDay: allDay, ended: ended, ahead: ahead, status: status, url: url,
+                ending: dayEnding(rows: rows, day: today, now: t, calendar: calendar),
+                symbols: symbols))
     }
 
     /// The first event that starts after `t` in the next 7 days, the `nextEvents` rule.
@@ -205,10 +228,10 @@ extension TodayDay {
         let events = ahead.filter(\.isEvent)
         var layouts: [[TodayRow]] = []
         if !ended.isEmpty {
-            layouts.append(allDay + ended.map(TodayRow.past) + ahead)
+            layouts.append(allDay + ended.map(TodayRow.past) + ahead + closing)
         }
-        layouts.append(allDay + earlier + ahead)
-        layouts.append(allDay + earlier + events)
+        layouts.append(allDay + earlier + ahead + closing)
+        layouts.append(allDay + earlier + events + closing)
         layouts += Self.cut(events).map { allDay + earlier + $0 }
         return Self.distinct(layouts)
     }
@@ -217,9 +240,15 @@ extension TodayDay {
     /// while there is room for them, then with events cut from the end behind `2 more`.
     var mediumLayouts: [[TodayRow]] {
         let events = ahead.filter(\.isEvent)
-        var layouts: [[TodayRow]] = [allDay + events, events]
+        var layouts: [[TodayRow]] = [allDay + events + closing, events + closing]
         layouts += Self.cut(events)
         return Self.distinct(layouts.filter { !$0.isEmpty })
+    }
+
+    /// The last line of a day with nothing left to come, which stays when the all-day lines
+    /// are the only thing above it.
+    private var closing: [TodayRow] {
+        ending == .nothingElse ? [.nothingElse(TodayContent.nothingElse)] : []
     }
 
     /// `events` with one, two and so on cut from the end, each followed by its `2 more`;

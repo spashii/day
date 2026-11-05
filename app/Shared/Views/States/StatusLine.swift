@@ -4,7 +4,7 @@ import SwiftUI
 
 /// What a day says before its events, when it has something to say: `Loading…` the first
 /// time, `No calendars shown.` when every calendar is hidden, `Nothing scheduled.` for a day
-/// with no events, then the status lines. Each is a line of text where the content would be,
+/// with no events at all (an all-day line is an event), then the status lines. Each is a line of text where the content would be,
 /// never a banner. While everything is fine it draws nothing, so the day starts with its
 /// events.
 struct DayStateLines: View {
@@ -40,6 +40,16 @@ struct DayStateLines: View {
             StatusLines()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// `Nothing else today.` under the rows of a day whose last event has ended, with or without
+/// an all-day line above the Earlier row. The list shows it only for `DayEnding.nothingElse`.
+struct DayEndingLine: View {
+    var body: some View {
+        Text("Nothing else today.")
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 

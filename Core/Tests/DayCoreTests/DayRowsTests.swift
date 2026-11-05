@@ -383,6 +383,69 @@ struct DayRowsTests {
         #expect(render(rows("2026-11-10", now: TestData.date("2026-11-10 12:00"), [])) == [])
     }
 
+    // MARK: Nothing else today
+
+    func ending(_ day: String, _ now: String, _ events: [Event]) -> DayEnding? {
+        let at = TestData.date(now)
+        return dayEnding(
+            rows: rows(day, now: at, events), day: TestData.day(day), now: at, calendar: calendar)
+    }
+
+    @Test func aDayWithNothingAtAllIsNothingScheduled() {
+        #expect(ending("2026-11-10", "2026-11-10 12:00", []) == .nothingScheduled)
+        // Any day, not only today.
+        #expect(ending("2026-11-11", "2026-11-10 12:00", []) == .nothingScheduled)
+    }
+
+    @Test func afterTheLastTimedEventTheDayIsNothingElse() {
+        let events = [
+            TestData.event("A", "2026-11-10 09:00", "2026-11-10 10:00"),
+            TestData.event("B", "2026-11-10 10:00", "2026-11-10 11:00"),
+        ]
+        #expect(ending("2026-11-10", "2026-11-10 12:00", events) == .nothingElse)
+        // The last event is still in progress, or another is still to come.
+        #expect(ending("2026-11-10", "2026-11-10 10:30", events) == nil)
+        #expect(ending("2026-11-10", "2026-11-10 08:00", events) == nil)
+    }
+
+    @Test func theAllDayLineStaysAndNothingElseFollowsItWithOrWithoutOne() {
+        let events = [
+            TestData.allDay("Lisbon", "2026-11-10", "2026-11-11"),
+            TestData.event("A", "2026-11-10 09:00", "2026-11-10 10:00"),
+        ]
+        let now = TestData.date("2026-11-10 12:00")
+        #expect(render(rows("2026-11-10", now: now, events)) == ["all-day: Lisbon", "Earlier: A"])
+        #expect(ending("2026-11-10", "2026-11-10 12:00", events) == .nothingElse)
+        #expect(ending("2026-11-10", "2026-11-10 12:00", [events[1]]) == .nothingElse)
+    }
+
+    @Test func anAllDayEventAloneCountsAsAnEvent() {
+        let events = [TestData.allDay("Lisbon", "2026-11-10", "2026-11-11")]
+        #expect(ending("2026-11-10", "2026-11-10 08:00", events) == .nothingElse)
+    }
+
+    @Test func nothingElseIsOnlyEverTodays() {
+        let events = [
+            TestData.allDay("Lisbon", "2026-11-11", "2026-11-12"),
+            TestData.event("A", "2026-11-09 09:00", "2026-11-09 10:00"),
+        ]
+        // Another day's list has no ending of its own while it has rows: it reads as a list.
+        #expect(ending("2026-11-11", "2026-11-10 12:00", events) == nil)
+        #expect(ending("2026-11-09", "2026-11-10 12:00", events) == nil)
+    }
+
+    @Test func theInventedWednesdayEndsWhenTheLastEventDoes() throws {
+        let events = try TestData.inventedEvents()
+        func at(_ time: String) -> DayEnding? {
+            let now = TestData.wednesday(time)
+            return dayEnding(
+                rows: rows("2026-11-04", now: now, events), day: TestData.day("2026-11-04"), now: now,
+                calendar: calendar)
+        }
+        #expect(at("12:10") == nil)
+        #expect(at("17:30") == .nothingElse)
+    }
+
     @Test func earlierFoldsTheEndedAndOnlyOnToday() {
         let events = [
             TestData.event("A", "2026-11-10 09:00", "2026-11-10 10:00"),

@@ -68,7 +68,7 @@ struct TodayProvider: TimelineProvider {
             return [TodayEntry(date: now, content: .message(TodayContent.addAccount, url: today))]
         case .unreadable:
             return [TodayEntry(date: now, content: .message(TodayContent.openToUpdate, url: today))]
-        case .found(let snapshot):
+        case .found(let snapshot, let symbols):
             guard snapshot.accountCount > 0 else {
                 return [TodayEntry(date: now, content: .message(TodayContent.addAccount, url: today))]
             }
@@ -80,7 +80,8 @@ struct TodayProvider: TimelineProvider {
                     date: date,
                     content: TodayContent.at(
                         date, events: snapshot.events, fetchedAt: snapshot.fetchedAt,
-                        signedOutAccounts: snapshot.signedOutAccounts, calendar: calendar))
+                        signedOutAccounts: snapshot.signedOutAccounts, calendar: calendar,
+                        symbols: symbols))
             }
         }
     }
@@ -117,11 +118,15 @@ enum TodaySource: Sendable {
     case missing
     /// A file the widget cannot decode.
     case unreadable
-    case found(WidgetSnapshot)
+    /// The snapshot and the calendar symbols the app copied beside it; none when the person
+    /// has chosen none, or the file is damaged.
+    case found(WidgetSnapshot, symbols: CalendarSymbolMap = CalendarSymbolMap())
 
     static func read() -> TodaySource {
         guard let cache = MacWidgetGroup.cache() else { return .missing }
-        if let snapshot = WidgetSnapshot.read(from: cache) { return .found(snapshot) }
+        if let snapshot = WidgetSnapshot.read(from: cache) {
+            return .found(snapshot, symbols: CalendarSymbolMap.read(from: cache))
+        }
         let exists = FileManager.default.fileExists(
             atPath: cache.fileURL(WidgetSnapshot.fileName).path(percentEncoded: false))
         return exists ? .unreadable : .missing

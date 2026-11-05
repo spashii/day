@@ -38,8 +38,27 @@ struct TimeColumn<Content: View>: View {
     }
 }
 
+/// The symbol of the event's calendar, small and monochrome in the secondary color, which
+/// leads the title of a row. A calendar with no symbol, or one this system cannot draw, adds
+/// nothing, so its row is as it was. The calendar's name is in the row's spoken label, so the
+/// symbol itself is decoration.
+struct EventSymbol: View {
+    @EnvironmentSymbols private var symbols
+    let event: Event
+
+    var body: some View {
+        if let symbol = symbols.map.symbol(for: event), symbol.isDrawable {
+            Image(systemName: symbol.name)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
+        }
+    }
+}
+
 /// An event: start and end, the colored rule, the title in Semibold for one-offs and
-/// Regular for recurring, one unusual second line, and Join in its window.
+/// Regular for recurring, one unusual second line, and Join in its window. The title is led
+/// by its calendar's symbol when it has one.
 struct EventRowContent: View {
     @EnvironmentStore private var store
     @Environment(\.dynamicTypeSize) private var typeSize
@@ -77,11 +96,14 @@ struct EventRowContent: View {
                         .monospacedDigit()
                         .foregroundStyle(past ? .secondary : .primary)
                 }
-                Text(event.title)
-                    .font(.body)
-                    .fontWeight(event.isRecurring ? .regular : .semibold)
-                    .foregroundStyle(past ? .secondary : .primary)
-                    .lineLimit(stacked ? nil : 1)
+                HStack(alignment: .firstTextBaseline, spacing: Spacing.row) {
+                    EventSymbol(event: event)
+                    Text(event.title)
+                        .font(.body)
+                        .fontWeight(event.isRecurring ? .regular : .semibold)
+                        .foregroundStyle(past ? .secondary : .primary)
+                        .lineLimit(stacked ? nil : 1)
+                }
                 if let secondLine {
                     Text(verbatim: secondLine)
                         .font(.subheadline)
@@ -206,11 +228,14 @@ struct AllDayRowContent: View {
     let position: String?
 
     var body: some View {
-        Text(verbatim: position.map { "\(event.title), \($0)" } ?? event.title)
-            .font(.subheadline)
-            .foregroundStyle(event.onHolidayCalendar ? .secondary : .primary)
-            .lineLimit(typeSize.isAccessibilitySize ? nil : 1)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(.rect)
+        HStack(alignment: .firstTextBaseline, spacing: Spacing.row) {
+            EventSymbol(event: event)
+            Text(verbatim: position.map { "\(event.title), \($0)" } ?? event.title)
+                .font(.subheadline)
+                .foregroundStyle(event.onHolidayCalendar ? .secondary : .primary)
+                .lineLimit(typeSize.isAccessibilitySize ? nil : 1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(.rect)
     }
 }
