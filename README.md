@@ -14,8 +14,7 @@ Day shows the calendars Google lists for each of your accounts as one, read-only
 - The calendars you see are the ones Google shows by default; a toggle per calendar hides the rest in Day without touching Google.
 - Colors are Google's, mapped to the nearest system color, so light, dark and Increase Contrast come from the system.
 - Day view with all-day events, an Earlier row that folds away what has ended, a red line for now, and gaps of an hour or more.
-- Event sheet on iPhone and popover on Mac: time (with the zone it was written in, when that differs from yours), repeats, a Join button for Meet, Zoom, Teams, Webex and Whereby links, place, guest count and your answer, the calendar, the description, and Open in Google Calendar.
-- Who's invited and their answers, organizer first.
+- Event sheet on iPhone and popover on Mac: time (with the zone it was written in, when that differs from yours), repeats, a Join button for Meet, Zoom, Teams, Webex and Whereby links, place, the guest list with everyone's answer, organizer first, the calendar, the description, and Open in Google Calendar.
 - Reminders from your Google events, with Join on calls. Each Mac and iPhone has its own switch.
 - Cached events show immediately and refresh quietly. When Google cannot be reached, a line says how old the events are. When Google signs an account out, a line says so, with Sign In Again.
 - Light and dark follow the system.
