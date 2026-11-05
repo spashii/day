@@ -3,13 +3,16 @@ import UIKit
 
 /// The iPhone's push entry points, attached to `DayApp` with `UIApplicationDelegateAdaptor`.
 /// A background push can launch the app with no scene in front, so the token is asked for
-/// here at launch rather than when a view appears. `PushSync` does the work.
+/// here at launch rather than when a view appears. `PushSync` does the work. The reminders'
+/// answers go through `NotificationDelegate`, installed here too.
 @MainActor
 final class PhoneAppDelegate: NSObject, UIApplicationDelegate {
     func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
+        // Before launch finishes, or a tap on a reminder that launched Day is not delivered.
+        ReminderResponder.shared.activate()
         PushSync.shared.start(model: AppLaunch.shared.model)
         return true
     }

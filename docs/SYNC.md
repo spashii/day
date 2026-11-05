@@ -21,12 +21,13 @@ Every list is read incrementally, as Google's guide describes (https://developer
 
 ### Files
 
-In the App Group container on iPhone, `~/Library/Application Support/Day/` on the Mac. Each file is plain JSON, replaced atomically.
+In the App Group container on iPhone, `~/Library/Application Support/Day/` on the Mac (`Day Debug/` for a Debug build, so it never touches the installed app's accounts). Each file is plain JSON, replaced atomically.
 
 - `events-<sub>.json`: one account's events. Rewritten only when they change, since a quiet refresh changes nothing and this is the largest file.
 - `sync-<sub>.json`: beside it, the last complete refresh and, per calendar, the token, the window of the full read that issued it, when that read ran and the days its events are complete for. Written after the events: a crash between the two leaves new events with old tokens, and reading changes again from an old token is harmless, because every change carries the event's whole current state. The other order could lose a change for good.
 - `near-<sub>.json`: written last, a copy of the part the widget needs: the account's events overlapping yesterday through ten days ahead, with every calendar's sync state as it was when they were written. The widget reads this one small file instead of decoding five months of events with their descriptions, which keeps its work inside the 5 seconds and its memory far from the extension's ceiling. It is used only if it holds the days the widget wants (it does for two days without the app running); otherwise that account is read from the full cache.
 - `calendars-<sub>.json`: the calendar list with labels and its own token.
+- **Format.** `sync-<sub>.json` and `calendars-<sub>.json` carry `format` (`CacheFormat.current`, now 3: 2 added the guest list, 3 the reminders and the calendars' default reminders; a file without it is 1). An incremental read only returns what changed, so a field Day starts keeping would otherwise be missing from every saved event until its calendar's next daily read. A lower number reads as never synced: every shown calendar is read in full in the next refresh and its events replaced, and the old events stay on screen until then. A calendar list below the current number is read in full once, not by token. Raise the number whenever the cached events or calendars gain a field.
 - `widget-snapshot.json`: merged visible events from today through eight days ahead, for the Lock Screen.
 
 **Read order.** The app writes events, then the sync file, then the near file. A reader in another process reads the sync file before the events. Whatever moment it lands on, it then gets events at least as new as the tokens: new events with an old token only means reading some changes again. The other order could pair old events with a new token, read no changes, and write a snapshot without the change, stamped newer than the app's correct one.

@@ -35,7 +35,8 @@ public enum GoogleDecoding {
             accessRole: accessRole(entry.accessRole),
             timeZone: entry.timeZone.flatMap { TimeZone(identifier: $0) != nil ? $0 : nil }
                 ?? "UTC",
-            labels: labels)
+            labels: labels,
+            defaultReminders: defaultReminders(entry.defaultReminders))
     }
 
     /// An account's calendar list in Google's order, with the primary calendar first.
@@ -105,7 +106,7 @@ public enum GoogleDecoding {
         let people = (google.attendees ?? []).filter { !isRoom($0) }
         let me = google.attendees?.first { $0.isSelf == true }
         let others = people.filter { $0.isSelf != true }
-        return Event(
+        var event = Event(
             id: EventID(calendar: calendar.id, googleID: google.id),
             iCalUID: nonEmpty(google.iCalUID) ?? google.id,
             originalStart: google.originalStartTime.flatMap(originalStart),
@@ -118,6 +119,7 @@ public enum GoogleDecoding {
             isOrganizer: google.organizer?.isSelf == true,
             attendeeCount: people.count,
             attendeeDomains: Set(others.compactMap { domain($0.email) }).sorted(),
+            attendees: (google.attendees ?? []).compactMap(attendee),
             isFree: google.transparency == "transparent",
             location: nonEmpty(google.location?.trimmingCharacters(in: .whitespacesAndNewlines)),
             joinURL: joinURL(google),
@@ -125,6 +127,8 @@ public enum GoogleDecoding {
             description: nonEmpty(google.description.map(plainText(fromHTML:))),
             colorKey: colorKey(
                 labelID: google.eventLabelId, colorID: google.colorId, calendar: calendar))
+        event.reminders = reminders(google.reminders)
+        return event
     }
 
     /// Every event of one calendar's page, skipping any without a usable start.
@@ -182,6 +186,18 @@ public enum GoogleDecoding {
         case "tentative": .tentative
         default: .needsAction
         }
+    }
+
+    /// One guest-list entry as the model keeps it, or nil for an entry with neither an
+    /// address nor a name, which the sheet could not draw.
+    static func attendee(_ person: GoogleEvent.Person) -> Attendee? {
+        let email = person.email?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let name = nonEmpty(person.displayName?.trimmingCharacters(in: .whitespacesAndNewlines))
+        guard !email.isEmpty || name != nil else { return nil }
+        return Attendee(
+            email: email, displayName: name, isOrganizer: person.isOrganizer == true,
+            isSelf: person.isSelf == true, isResource: isRoom(person),
+            isOptional: person.isOptional == true, response: response(person.responseStatus))
     }
 
     static func isRoom(_ person: GoogleEvent.Person) -> Bool {

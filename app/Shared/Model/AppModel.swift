@@ -153,9 +153,9 @@ final class AppModel: CalendarStore {
     /// The shared folder (the App Group on iPhone, so the widget reads it too). A build
     /// signed without the App Group still runs, from its own container, with no widget data.
     private static func cacheDirectory() -> CacheDirectory {
-        if let shared = try? CacheDirectory.shared() { return shared }
+        if let shared = try? BuildFolder.cache() { return shared }
         let support = URL.applicationSupportDirectory.appending(
-            path: "Day", directoryHint: .isDirectory)
+            path: BuildFolder.macFolder, directoryHint: .isDirectory)
         return CacheDirectory(url: support)
     }
 
@@ -249,6 +249,7 @@ final class AppModel: CalendarStore {
     /// (the clock moved back) does not hold the refresh off.
     func sceneDidBecomeActive() {
         tick()
+        ReminderScheduler.shared.becameActive()
         if let last = lastRefreshAttempt,
             (0..<Self.foregroundThrottle).contains(clock().timeIntervalSince(last))
         {
@@ -614,6 +615,7 @@ final class AppModel: CalendarStore {
             data.visibility.set(toggle.visible, for: id)
         }
         derived = Derived(data: data, calendar: calendar)
+        ReminderScheduler.shared.update(derived.data, calendar: calendar)
     }
 
     /// A toggle shown on screen and not yet written. `version` counts the toggles made of

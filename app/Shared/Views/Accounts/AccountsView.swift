@@ -13,6 +13,9 @@ struct AccountsView: View {
 
     /// `Add Google Account…`, or `Add Another Account…` in the iPhone's first-run flow.
     var addTitle: LocalizedStringKey = "Add Google Account…"
+    /// The reminders switch, for the iPhone Calendars sheet, which is the iPhone's only
+    /// settings screen. The Mac has it in Settings, General; first run has nothing to remind.
+    var showsReminders = false
 
     @State private var removing: Account?
     @State private var failure: String?
@@ -34,6 +37,10 @@ struct AccountsView: View {
                         }
                     }
                 }
+            }
+            // Above the add button, so the privacy text stays the last thing in the list.
+            if showsReminders {
+                ReminderSettingsSection()
             }
             Section {
                 Button(addTitle) {
@@ -107,9 +114,9 @@ struct AccountsView: View {
 
     private var privacy: LocalizedStringKey {
         #if os(macOS)
-            "Day reads your calendars from Google and keeps them on your devices. Your sign-in moves between them in iCloud Keychain, which is end-to-end encrypted. To show changes as they happen, Google tells Day's server at apps.idea2prod.in that a calendar changed, never what changed, and the server keeps only random IDs, push addresses and the device type. On the Mac, Day also checks for updates through apps.idea2prod.in, which counts checks and downloads by app, version and country and never stores your IP address."
+            "Day reads your calendars from Google and keeps them on your devices. Your sign-in moves between them in iCloud Keychain, which is end-to-end encrypted. To pick up changes sooner, Google tells Day's server at apps.idea2prod.in that a calendar changed, never what changed, and the server keeps only random IDs, push addresses and the device type. On the Mac, Day also checks for updates through apps.idea2prod.in, which counts checks and downloads by app, version and country and never stores your IP address."
         #else
-            "Day reads your calendars from Google and keeps them on your devices. Your sign-in moves between them in iCloud Keychain, which is end-to-end encrypted. To show changes as they happen, Google tells Day's server at apps.idea2prod.in that a calendar changed, never what changed, and the server keeps only random IDs, push addresses and the device type."
+            "Day reads your calendars from Google and keeps them on your devices. Your sign-in moves between them in iCloud Keychain, which is end-to-end encrypted. To pick up changes sooner, Google tells Day's server at apps.idea2prod.in that a calendar changed, never what changed, and the server keeps only random IDs, push addresses and the device type."
         #endif
     }
 
@@ -282,7 +289,7 @@ struct CalendarsSheet: View {
 
     var body: some View {
         NavigationStack {
-            AccountsView()
+            AccountsView(showsReminders: true)
                 .navigationTitle("Calendars")
                 #if os(iOS)
                     .navigationBarTitleDisplayMode(.inline)

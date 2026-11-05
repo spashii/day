@@ -64,6 +64,9 @@ public struct CalendarInfo: Codable, Hashable, Identifiable, Sendable {
     public var timeZone: String
     /// Keyed by Google's label ID.
     public var labels: [String: LabelInfo]
+    /// Minutes before the start of each popup reminder in Google's `defaultReminders`, which
+    /// the events that `useDefault` follow. Email reminders are left out.
+    public var defaultReminders: [Int]
 
     public init(
         id: CalendarID,
@@ -73,7 +76,8 @@ public struct CalendarInfo: Codable, Hashable, Identifiable, Sendable {
         isPrimary: Bool = false,
         accessRole: AccessRole = .reader,
         timeZone: String = "UTC",
-        labels: [String: LabelInfo] = [:]
+        labels: [String: LabelInfo] = [:],
+        defaultReminders: [Int] = []
     ) {
         self.id = id
         self.name = name
@@ -83,6 +87,7 @@ public struct CalendarInfo: Codable, Hashable, Identifiable, Sendable {
         self.accessRole = accessRole
         self.timeZone = timeZone
         self.labels = labels
+        self.defaultReminders = defaultReminders
     }
 
     /// The mark beside the calendar's name. Gray when Google sent something unreadable.
@@ -106,5 +111,6 @@ public struct CalendarInfo: Codable, Hashable, Identifiable, Sendable {
         accessRole = try c.decodeIfPresent(AccessRole.self, forKey: .accessRole) ?? .reader
         timeZone = try c.decodeIfPresent(String.self, forKey: .timeZone) ?? "UTC"
         labels = try c.decodeIfPresent([String: LabelInfo].self, forKey: .labels) ?? [:]
+        defaultReminders = try c.decodeIfPresent([Int].self, forKey: .defaultReminders) ?? []
     }
 }

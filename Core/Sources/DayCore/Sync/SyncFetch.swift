@@ -42,7 +42,8 @@ extension SyncEngine {
 
         let interval = CalendarSync.fullSyncInterval(for: account.sub)
         var changed: CalendarListResult?
-        if let previous, let token = previous.syncToken, let fullAt = previous.fullSyncAt,
+        if let previous, previous.format >= CacheFormat.current,
+            let token = previous.syncToken, let fullAt = previous.fullSyncAt,
             (0..<interval).contains(now.timeIntervalSince(fullAt))
         {
             do {

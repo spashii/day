@@ -15,11 +15,13 @@ Day shows the calendars Google lists for each of your accounts as one, read-only
 - Colors are Google's, mapped to the nearest system color, so light, dark and Increase Contrast come from the system.
 - Day view with all-day events, an Earlier row that folds away what has ended, a red line for now, and gaps of an hour or more.
 - Event sheet on iPhone and popover on Mac: time (with the zone it was written in, when that differs from yours), repeats, a Join button for Meet, Zoom, Teams, Webex and Whereby links, place, guest count and your answer, the calendar, the description, and Open in Google Calendar.
+- Who's invited and their answers, organizer first.
+- Reminders from your Google events, with Join on calls. Each Mac and iPhone has its own switch.
 - Cached events show immediately and refresh quietly. When Google cannot be reached, a line says how old the events are. When Google signs an account out, a line says so, with Sign In Again.
 - Light and dark follow the system.
 - Mac: one window with the month and a day pane, Apple Calendar's keyboard shortcuts, and Open at login if you choose it.
 
-Not in Day: editing or creating events, replying to invitations, notifications, search, a week view, Home Screen widgets, iPad, Apple Watch.
+Not in Day: editing or creating events, replying to invitations, search, a week view, Home Screen widgets, iPad, Apple Watch.
 
 ## Requirements
 
@@ -54,9 +56,9 @@ On the Mac, the keyboard follows Apple Calendar: Command-T for today, Shift-Comm
 
 ## Privacy
 
-**Mac.** Day reads your calendars from Google and keeps them on your devices. Your sign-in moves between them in iCloud Keychain, which is end-to-end encrypted. To show changes as they happen, Google tells Day's server at apps.idea2prod.in that a calendar changed, never what changed, and the server keeps only random IDs, push addresses and the device type. On the Mac, Day also checks for updates through apps.idea2prod.in, which counts checks and downloads by app, version and country and never stores your IP address.
+**Mac.** Day reads your calendars from Google and keeps them on your devices. Your sign-in moves between them in iCloud Keychain, which is end-to-end encrypted. To pick up changes sooner, Google tells Day's server at apps.idea2prod.in that a calendar changed, never what changed, and the server keeps only random IDs, push addresses and the device type. On the Mac, Day also checks for updates through apps.idea2prod.in, which counts checks and downloads by app, version and country and never stores your IP address.
 
-**iPhone.** Day reads your calendars from Google and keeps them on your devices. Your sign-in moves between them in iCloud Keychain, which is end-to-end encrypted. To show changes as they happen, Google tells Day's server at apps.idea2prod.in that a calendar changed, never what changed, and the server keeps only random IDs, push addresses and the device type.
+**iPhone.** Day reads your calendars from Google and keeps them on your devices. Your sign-in moves between them in iCloud Keychain, which is end-to-end encrypted. To pick up changes sooner, Google tells Day's server at apps.idea2prod.in that a calendar changed, never what changed, and the server keeps only random IDs, push addresses and the device type.
 
 It has no analytics and no accounts of its own. Day asks Google for read-only access to your calendars and for your email address. The sign-in is kept in iCloud Keychain, or in the device's keychain without it. Which calendars you show, and their icons, sync through iCloud. Your events are stored in the app's own folder: `~/Library/Application Support/Day` on the Mac. The full text is in [site/privacy.html](https://apps.idea2prod.in/day/privacy.html).
 

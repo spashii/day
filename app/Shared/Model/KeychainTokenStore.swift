@@ -17,8 +17,8 @@ import os
 /// - Old: service `io.github.spashii.day.google`, the per-device items of earlier builds (the
 ///   Mac's login keychain, the iPhone's App Group). Read until a refresh has shown that
 ///   Google accepts them and the app has copied them into shared items. A build that cannot
-///   reach the group keeps everything in its own service `io.github.spashii.day.google.local`
-///   instead.
+///   reach the group keeps everything in its own service instead: `io.github.spashii.day.google.local`,
+///   or `.debug` for the Mac's Debug build.
 /// - Revocation: service `io.github.spashii.day.revoke`, same group, never synced: the
 ///   refresh token of a removed account until Google has confirmed the revocation.
 ///
@@ -33,7 +33,8 @@ import os
 /// and never asks the keychain, so it does not depend on which status the system would answer
 /// with. It keeps its tokens in the login keychain, under its own service, so the build that
 /// holds the group never moves its items into the shared keychain and it never reads what that
-/// build left behind. The desktop widget never reads tokens and claims no keychain group.
+/// build left behind. Its folder is its own too (`BuildFolder`), so it never sees the installed
+/// app's accounts. The desktop widget never reads tokens and claims no keychain group.
 ///
 /// This file is compiled into the widget too, so it uses DayCore and Security only.
 struct KeychainTokenStore: TokenStore {
@@ -153,7 +154,9 @@ struct SecItemKeychain: KeychainBackend {
 
     /// The Mac build that cannot use the shared group keeps its tokens here, in the login
     /// keychain under a service of its own: the build that can use the group moves the items
-    /// of `legacy` into the shared keychain, and must not take these with them.
+    /// of `legacy` into the shared keychain, and must not take these with them. A Debug build
+    /// has a service apart from a Release build without the group, so the two can never read
+    /// each other's sign-ins either.
     static let local = SecItemKeychain(
         service: DayIdentifiers.keychainService + localSuffix, group: nil, sync: false,
         accessible: nil, dataProtection: false)
@@ -164,7 +167,13 @@ struct SecItemKeychain: KeychainBackend {
         service: revocationService + localSuffix, group: nil, sync: false, accessible: nil,
         dataProtection: false)
 
-    private static let localSuffix = ".local"
+    private static let localSuffix: String = {
+        #if os(macOS) && DEBUG
+            return ".debug"
+        #else
+            return ".local"
+        #endif
+    }()
 
     func read(_ account: String) throws -> Data? {
         var query = query(account)

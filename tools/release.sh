@@ -35,7 +35,11 @@
 # is $HOME/.blend-signing/Day_DeveloperID.provisionprofile, or DAY_MAC_PROFILE. It is checked
 # before anything is built, installed for Xcode, embedded in the app, and the signed app is
 # checked for the entitlements. Without it the app is built with the App Group alone, as the
-# Debug build runs: --publish stops, anything else warns.
+# Debug build runs: --publish stops, anything else warns. The time-sensitive notification
+# entitlement is the one exception: a profile made before the App ID had that capability
+# lacks it, and then only that entitlement is left out, with a warning. A call's start
+# notification arrives at the normal level, and the app keeps its keychain group, which
+# falling back to the App Group alone would take from every signed-in account.
 #
 # Environment: DAY_SIGN_ID and DAY_NOTARY_PROFILE use an identity and a notarytool profile
 # from your login keychain instead of the blend-release keychain. DAY_SPARKLE_DIR and
@@ -149,6 +153,7 @@ fi
 macProfile=${DAY_MAC_PROFILE:-$signing/Day_DeveloperID.provisionprofile}
 macProfileName=
 macProfileProblem=
+macTimeSensitive=false
 if $doMac && ! $dry; then
   if [[ ! -f $macProfile ]]; then
     macProfileProblem="no Developer ID provisioning profile at $macProfile (DAY_MAC_PROFILE)"
@@ -170,6 +175,8 @@ if $doMac && ! $dry; then
       done
       [[ $(profileValue Entitlements:com.apple.developer.aps-environment) == production ]] ||
         macProfileProblem="$macProfile does not grant push in production"
+      [[ $(profileValue Entitlements:com.apple.developer.usernotifications.time-sensitive) == true ]] &&
+        macTimeSensitive=true
       expires=$(plutil -extract ExpirationDate raw -o - $macProfilePlist 2>/dev/null || true)
       [[ -n $expires && $(date -j -u -f '%Y-%m-%dT%H:%M:%SZ' $expires +%s 2>/dev/null || echo 0) -gt $(date +%s) ]] ||
         macProfileProblem="$macProfile has expired"
@@ -281,6 +288,15 @@ buildMac() {
   local profileFlags=()
   if [[ -n $macProfileName ]]; then
     profileFlags=(DAY_MAC_PROFILE_NAME="$macProfileName")
+    if ! $macTimeSensitive; then
+      # Xcode refuses an entitlement the profile does not grant, and macOS would kill the
+      # app for it, so it goes and everything else the profile grants stays.
+      print -u2 -- "warning: $macProfile does not grant time-sensitive notifications; the Mac app is built without them, and a call's start notification arrives at the normal level. Regenerate the profile after enabling Time Sensitive Notifications on the App ID."
+      cp app/Mac/Day.entitlements app/Mac/DayNoTimeSensitive.entitlements
+      /usr/libexec/PlistBuddy -c 'Delete :com.apple.developer.usernotifications.time-sensitive' \
+        app/Mac/DayNoTimeSensitive.entitlements
+      profileFlags+=(DAY_MAC_ENTITLEMENTS=Mac/DayNoTimeSensitive.entitlements)
+    fi
   else
     print -r -- '<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -299,8 +315,10 @@ buildMac() {
       die "$app has no embedded.provisionprofile: Xcode did not embed $macProfileName."
     local claimed key
     claimed=$(codesign -d --entitlements - $app 2>&1 || true)
-    for key in keychain-access-groups com.apple.developer.ubiquity-kvstore-identifier \
-      com.apple.developer.aps-environment; do
+    local wanted=(keychain-access-groups com.apple.developer.ubiquity-kvstore-identifier
+      com.apple.developer.aps-environment)
+    $macTimeSensitive && wanted+=(com.apple.developer.usernotifications.time-sensitive)
+    for key in $wanted; do
       [[ $claimed == *$key* ]] || die "$app does not carry $key; the profile $macProfileName was not applied."
     done
   fi

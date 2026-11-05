@@ -9,6 +9,9 @@ public enum DayIdentifiers {
     public static let urlScheme = "day"
     /// The Lock Screen widget's kind, shown in the gallery as "Next".
     public static let widgetKind = "Next"
+    /// The Mac app's folder in Application Support. A Debug build of the app passes its own
+    /// to `CacheDirectory.shared(macFolder:)`.
+    public static let macFolder = "Day"
     /// Keychain service for the per-account token items.
     public static let keychainService = "io.github.spashii.day.google"
     /// The `BGAppRefreshTask` identifier.

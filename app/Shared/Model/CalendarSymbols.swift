@@ -24,7 +24,7 @@ import SwiftUI
 @MainActor
 @Observable
 final class CalendarSymbols {
-    static let shared = CalendarSymbols(cache: try? CacheDirectory.shared())
+    static let shared = CalendarSymbols(cache: try? BuildFolder.cache())
 
     private(set) var map: CalendarSymbolMap
 

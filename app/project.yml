@@ -96,6 +96,10 @@ targets:
         # Developer ID profile grants, so that profile needs Push Notifications too. Debug
         # claims no entitlements and gets no pushes; the timers keep it current.
         com.apple.developer.aps-environment: production
+        # The notification at the start of a call breaks through a Focus the person allows it
+        # through (ReminderSchedule). The profile has to grant it too; tools/release.sh leaves
+        # this key out, and only this one, when it does not.
+        com.apple.developer.usernotifications.time-sensitive: true
     settings:
       base:
         PRODUCT_NAME: Day
@@ -200,6 +204,9 @@ targets:
         # with a development profile and refuses another value, and the export for App
         # Store Connect re-signs TestFlight builds with production.
         aps-environment: development
+        # The notification at the start of a call breaks through a Focus the person allows it
+        # through (ReminderSchedule). Without it the system delivers it at the normal level.
+        com.apple.developer.usernotifications.time-sensitive: true
     settings:
       base:
         PRODUCT_NAME: Day

@@ -48,6 +48,9 @@ final class MacLaunch {
 @MainActor
 final class DayAppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Before anything can schedule a reminder, so a click on one that arrived while Day
+        // was not running reaches it.
+        ReminderResponder.shared.activate()
         MacLaunch.shared.model?.start()
         MenuTrim.start()
         #if DEBUG

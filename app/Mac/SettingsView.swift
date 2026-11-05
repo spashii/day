@@ -3,7 +3,7 @@ import SwiftUI
 
 /// The Settings window, two tabs and nothing else. Accounts is the same list as first run and
 /// the iPhone Calendars sheet, so calendar visibility lives here and not on screen every day.
-/// General has `Open at login` and the update controls.
+/// General has `Open at login`, the reminders switch and the update controls.
 struct SettingsView: View {
     @Bindable var state: MacState
     let updater: Updater
@@ -18,13 +18,14 @@ struct SettingsView: View {
             Tab("General", systemImage: "gearshape", value: MacState.SettingsTab.general) {
                 // Each tab is as tall as its content, and the window follows when the tab changes.
                 GeneralSettings(updater: updater, login: login)
-                    .frame(width: 520, height: 190)
+                    .frame(width: 520, height: 300)
             }
         }
     }
 }
 
-/// `Open at login`, `Check for updates automatically` and `Check for Updates…`.
+/// `Open at login`, `Remind me on this Mac`, `Check for updates automatically` and
+/// `Check for Updates…`.
 struct GeneralSettings: View {
     @Bindable var updater: Updater
     let login: OpenAtLogin
@@ -41,6 +42,7 @@ struct GeneralSettings: View {
                     Text(verbatim: failure)
                 }
             }
+            ReminderSettingsSection()
             Section {
                 Toggle("Check for updates automatically", isOn: $updater.automatic)
                 Button("Check for Updates…") { updater.check() }

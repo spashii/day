@@ -12,7 +12,7 @@ enum PushLatency {
         #if os(macOS)
             if let group = MacWidgetGroup.cache() { return group }
         #endif
-        return try? CacheDirectory.shared()
+        return try? BuildFolder.cache()
     }
 
     #if os(iOS)

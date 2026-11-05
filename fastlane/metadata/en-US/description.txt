@@ -5,12 +5,14 @@ The next event is on your Lock Screen, above or below the clock. The month names
 - Several Google accounts in one view.
 - A Lock Screen widget in three sizes.
 - Join for Meet, Zoom, Teams, Webex and Whereby links.
+- Who's invited and who's coming.
+- Reminders from your Google events, with Join on calls.
 - Open in Google Calendar to edit anything.
 - Colors are Google's. Light and dark follow your iPhone.
 
-Day does not edit events, send replies or send notifications. Google Calendar does that, one tap away.
+Day does not edit events or send replies. Google Calendar does that, one tap away.
 
-Day reads your calendars from Google and keeps them on your devices. Your sign-in moves between them in iCloud Keychain, which is end-to-end encrypted. To show changes as they happen, Google tells Day's server at apps.idea2prod.in that a calendar changed, never what changed, and the server keeps only random IDs, push addresses and the device type.
+Day reads your calendars from Google and keeps them on your devices. Your sign-in moves between them in iCloud Keychain, which is end-to-end encrypted. To pick up changes sooner, Google tells Day's server at apps.idea2prod.in that a calendar changed, never what changed, and the server keeps only random IDs, push addresses and the device type.
 
 Free and open source.
 
