@@ -9,6 +9,6 @@ How to test:
 
 Day asks Google for read-only access to calendars (the calendar.readonly scope) and for the account's email address. It cannot create, change or delete events. Open in Google Calendar hands the event's link to the Google Calendar app or to Safari.
 
-Privacy: Day collects no data. Events and the sign-in stay on the device. The App Store privacy label is Data Not Collected, and app/PrivacyInfo.xcprivacy in the open source repository (https://github.com/spashii/day) says the same.
+Privacy: Day reads your calendars from Google and keeps them on your devices. Your sign-in moves between them in iCloud Keychain, which is end-to-end encrypted. To show changes as they happen, Google tells Day's server at apps.idea2prod.in that a calendar changed, never what changed, and the server keeps only random IDs, push addresses and the device type. App Store privacy label: Data Not Linked to You (a device identifier, used to deliver updates to your calendars). app/PrivacyInfo.xcprivacy in the open source repository (https://github.com/spashii/day) says the same.
 
 No purchase is needed for any feature. Day has no ads, no analytics and no tracking.

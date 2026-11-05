@@ -55,6 +55,7 @@ struct NextProvider: TimelineProvider {
     ) {
         Task {
             completion(await Self.timeline(now: .now))
+            LatencyLog.widgetDrew(.iphoneWidget, in: try? CacheDirectory.shared())
         }
     }
 

@@ -48,13 +48,16 @@ struct AccountsView: View {
                     if !store.accounts.isEmpty {
                         Text("Hidden calendars stay in Google.")
                     }
+                    if Self.syncIsAvailable {
+                        Text("With iCloud Keychain on, accounts you add here appear on your other devices.")
+                    }
                     Text(privacy)
                 }
             }
         }
         .formStyle(.grouped)
         .confirmationDialog(
-            removing?.email ?? "",
+            Text("Remove \(removing?.email ?? "") from all your devices?"),
             isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } }),
             titleVisibility: .visible,
             presenting: removing
@@ -65,9 +68,18 @@ struct AccountsView: View {
                     symbols.forget(account: account.id)
                 }
             }
+            Button("Cancel", role: .cancel) {}
         } message: { _ in
-            Text("Its calendars disappear from Day. Nothing changes in Google.")
+            Text("Day signs it out on your Mac and iPhone and deletes its saved events.")
         }
+    }
+
+    /// Whether accounts added here can reach the person's other devices: an iCloud account is
+    /// signed in on this one. The system has no call that says whether iCloud Keychain itself
+    /// is on, so this is the nearest thing it does say. A Mac build without the keychain group
+    /// (Debug) keeps its accounts on the Mac whatever iCloud says.
+    private static var syncIsAvailable: Bool {
+        FileManager.default.ubiquityIdentityToken != nil && KeychainTokenStore.holdsSharedGroup
     }
 
     /// The account's address; `Signed out` beside it when Google refused it. Removing is a
@@ -95,9 +107,9 @@ struct AccountsView: View {
 
     private var privacy: LocalizedStringKey {
         #if os(macOS)
-            "Day reads your calendars from Google and keeps them on this device. Day itself collects nothing. It also checks for updates through apps.idea2prod.in, which counts checks and downloads by app, version and country and never stores your IP address."
+            "Day reads your calendars from Google and keeps them on your devices. Your sign-in moves between them in iCloud Keychain, which is end-to-end encrypted. To show changes as they happen, Google tells Day's server at apps.idea2prod.in that a calendar changed, never what changed, and the server keeps only random IDs, push addresses and the device type. On the Mac, Day also checks for updates through apps.idea2prod.in, which counts checks and downloads by app, version and country and never stores your IP address."
         #else
-            "Day reads your calendars from Google and keeps them on this device. Day itself collects nothing."
+            "Day reads your calendars from Google and keeps them on your devices. Your sign-in moves between them in iCloud Keychain, which is end-to-end encrypted. To show changes as they happen, Google tells Day's server at apps.idea2prod.in that a calendar changed, never what changed, and the server keeps only random IDs, push addresses and the device type."
         #endif
     }
 

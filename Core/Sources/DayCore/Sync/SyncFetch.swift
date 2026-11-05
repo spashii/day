@@ -331,6 +331,9 @@ actor AccountAuthorizer {
     let tokens: any TokenStore
     let clock: @Sendable () -> Date
     private(set) var token: StoredToken
+    /// Whether Google answered a refresh with this token: proof that it still works, which a
+    /// still valid access token is not.
+    private(set) var refreshAccepted = false
     private var refreshing: Task<StoredToken, any Error>?
 
     init(
@@ -367,8 +370,23 @@ actor AccountAuthorizer {
             task.cancel()
         }
         token = refreshed
+        refreshAccepted = true
         try? tokens.save(refreshed, for: account)
         return refreshed.accessToken ?? ""
+    }
+
+    /// Asks Google to take the refresh token now, even while the access token has time left,
+    /// so a token that has only been read from an old item is proven before it is copied.
+    /// Returns `.signedOut` when Google refuses the token; any other failure is for the
+    /// fetch that follows to find again.
+    func prove() async -> AccountProblem? {
+        do {
+            _ = try await accessToken(rejecting: token.accessToken)
+            return nil
+        } catch {
+            let problem = AccountProblem(error)
+            return problem == .signedOut ? problem : nil
+        }
     }
 
     /// Runs `call` with a token; on a 401, once more with a new one.

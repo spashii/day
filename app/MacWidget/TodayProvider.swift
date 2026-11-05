@@ -43,6 +43,7 @@ struct TodayProvider: TimelineProvider {
         in context: Context, completion: @escaping @Sendable (Timeline<TodayEntry>) -> Void
     ) {
         completion(Self.timeline(now: .now))
+        LatencyLog.widgetDrew(.macWidget, in: MacWidgetGroup.cache())
     }
 
     /// Asks again after the last entry. A timeline of one entry (a state line) has nothing

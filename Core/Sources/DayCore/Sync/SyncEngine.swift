@@ -46,6 +46,8 @@ public actor SyncEngine {
     /// change is not handed out as the answer to one asked for after it.
     private var generation = 0
     private var inFlight: (task: Task<SyncReport, Never>, generation: Int)?
+    /// Whether `retryRevocations` is running, so two triggers do not revoke the same token twice.
+    var retryingRevocations = false
 
     public init(
         auth: GoogleAuth?,
@@ -156,7 +158,7 @@ public actor SyncEngine {
             throw OAuthError.differentAccount(email: signIn.email)
         }
         if signIn.grantsCalendar {
-            try tokens.save(signIn.token, for: signIn.account)
+            try tokens.signIn(signIn.token, for: signIn.account)
         }
         var accounts = cache.read([Account].self, from: CacheFile.accounts) ?? []
         let account: Account
@@ -175,8 +177,9 @@ public actor SyncEngine {
         return account
     }
 
-    /// Forgets the account on this device: its tokens, calendars, events, sync tokens and
-    /// toggles. Nothing changes in Google.
+    /// Removes the account: its tokens (the shared item too, which iCloud Keychain carries to
+    /// every device), calendars, events, sync tokens and toggles on this device. Ending the
+    /// grant at Google is the caller's (`queueRevocation`, `retryRevocations`).
     public func removeAccount(_ id: AccountID) throws {
         try tokens.removeToken(for: id)
         var accounts = cache.read([Account].self, from: CacheFile.accounts) ?? []
@@ -351,6 +354,30 @@ public actor SyncEngine {
             }
         }
 
+        // A token read from an old per-device item is asked of Google first, even with an
+        // access token that still has time: the item moves into the shared keychain only
+        // after Google has taken the refresh token, and a valid access token proves nothing
+        // about it (`settleLegacyItems`).
+        if let store = tokens.sharedStore {
+            let unproven = authorizers.filter { store.readsOldItem($0.key) }
+            let refused = await withTaskGroup(of: AccountID?.self) { group in
+                for (id, authorizer) in unproven {
+                    group.addTask { await authorizer.prove() == nil ? nil : id }
+                }
+                var found: [AccountID] = []
+                for await id in group {
+                    if let id { found.append(id) }
+                }
+                return found
+            }
+            // A refused token is read no further: the access token it handed out earlier may
+            // still work for a while, which is no reason to keep the account signed in.
+            for id in refused {
+                problems[id] = .signedOut
+                authorizers[id] = nil
+            }
+        }
+
         // Calendar lists, all accounts at once.
         var lists: [AccountID: CalendarsFile] = [:]
         await withTaskGroup(of: (AccountID, Result<CalendarsFile, AccountProblem>).self) { group in
@@ -466,8 +493,19 @@ public actor SyncEngine {
             newlySignedOut.append(id)
         }
         if !newlySignedOut.isEmpty {
+            // The refused token is noted where the refusal is known, before the list says
+            // signed out. Looking it up on a later pass would find the shared item, which a
+            // sign-in on another device may have replaced by then, and mistake the new
+            // token for the refused one.
+            noteRefused(
+                newlySignedOut.compactMap { id in
+                    refreshTokens[id].map { (account: id, refreshToken: $0) }
+                })
             try? cache.write(accounts, to: CacheFile.accounts)
         }
+        await settleLegacyItems(
+            authorizers: authorizers, refreshTokens: refreshTokens, problems: problems,
+            newlySignedOut: newlySignedOut)
 
         let data = load()
         if let snapshot = data.widgetSnapshot(now: now, calendar: calendar) {

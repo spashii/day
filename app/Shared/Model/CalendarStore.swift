@@ -42,7 +42,7 @@ protocol CalendarStore: AnyObject, Observable {
     func addAccount(using session: WebAuthenticationSession) async throws
     /// Signs a signed-out account in again, with its email as the login hint.
     func signInAgain(_ account: AccountID, using session: WebAuthenticationSession) async throws
-    /// Forgets the account here. Nothing changes in Google.
+    /// Removes the account from every device and ends Day's access at Google.
     func removeAccount(_ account: AccountID)
 }
 
@@ -52,7 +52,9 @@ protocol CalendarStore: AnyObject, Observable {
 enum StoreStatus: Hashable, Sendable {
     /// Nothing to say: cached or fresh data on screen.
     case current
-    /// First fetch with nothing cached: the day reads `Loading…`. Once per install.
+    /// An account signed in and never fetched, with nothing cached for it: the day reads
+    /// `Loading…`. Once per account on each device, which includes one that arrived from
+    /// another device.
     case loading
     /// `Offline. Showing events as of 9:40.`
     case offline

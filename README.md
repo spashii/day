@@ -54,11 +54,11 @@ On the Mac, the keyboard follows Apple Calendar: Command-T for today, Shift-Comm
 
 ## Privacy
 
-**Mac.** Day reads your calendars from Google and keeps them on this device. Day itself collects nothing. It also checks for updates through apps.idea2prod.in, which counts checks and downloads by app, version and country and never stores your IP address.
+**Mac.** Day reads your calendars from Google and keeps them on your devices. Your sign-in moves between them in iCloud Keychain, which is end-to-end encrypted. To show changes as they happen, Google tells Day's server at apps.idea2prod.in that a calendar changed, never what changed, and the server keeps only random IDs, push addresses and the device type. On the Mac, Day also checks for updates through apps.idea2prod.in, which counts checks and downloads by app, version and country and never stores your IP address.
 
-**iPhone.** Day reads your calendars from Google and keeps them on this device. Day itself collects nothing.
+**iPhone.** Day reads your calendars from Google and keeps them on your devices. Your sign-in moves between them in iCloud Keychain, which is end-to-end encrypted. To show changes as they happen, Google tells Day's server at apps.idea2prod.in that a calendar changed, never what changed, and the server keeps only random IDs, push addresses and the device type.
 
-It has no analytics and no accounts of its own. Day asks Google for read-only access to your calendars and for your email address. The sign-in is kept in the keychain, and your events are stored in the app's own folder: `~/Library/Application Support/Day` on the Mac. The full text is in [site/privacy.html](https://apps.idea2prod.in/day/privacy.html).
+It has no analytics and no accounts of its own. Day asks Google for read-only access to your calendars and for your email address. The sign-in is kept in iCloud Keychain, or in the device's keychain without it. Which calendars you show, and their icons, sync through iCloud. Your events are stored in the app's own folder: `~/Library/Application Support/Day` on the Mac. The full text is in [site/privacy.html](https://apps.idea2prod.in/day/privacy.html).
 
 ## Uninstall
 
@@ -69,7 +69,7 @@ rm -rf ~/Library/Application\ Support/Day ~/Library/Caches/io.github.spashii.day
 rm -f ~/Library/Preferences/io.github.spashii.day.plist
 ```
 
-Remove your accounts in Day before deleting it, so their sign-ins leave the keychain. To end Day's access from Google's side, use your Google account's security settings. On iPhone, delete the app.
+Remove your accounts in Day before deleting it, so their sign-ins leave the keychain. Removing an account removes it from all your devices: its sign-in, its saved events and its calendar settings. You can also end Day's access at any time from your Google account's security settings. On iPhone, delete the app.
 
 ## How it works
 

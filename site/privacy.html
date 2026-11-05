@@ -5,28 +5,30 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Day: privacy</title>
 <link rel="canonical" href="https://apps.idea2prod.in/day/privacy.html">
-<meta name="description" content="Day reads your calendars from Google and keeps them on this device. Day itself collects nothing.">
+<meta name="description" content="Day reads your calendars from Google and keeps them on your devices.">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <main class="page">
   <h1>Privacy</h1>
-  <p class="lead">Day reads your calendars from Google and keeps them on this device. Day itself collects nothing. On the Mac, it also checks for updates through apps.idea2prod.in, which counts checks and downloads by app, version and country and never stores your IP address.</p>
+  <p class="lead">Day reads your calendars from Google and keeps them on your devices. Your sign-in moves between them in iCloud Keychain, which is end-to-end encrypted. To show changes as they happen, Google tells Day's server at apps.idea2prod.in that a calendar changed, never what changed, and the server keeps only random IDs, push addresses and the device type. On the Mac, Day also checks for updates through apps.idea2prod.in, which counts checks and downloads by app, version and country and never stores your IP address.</p>
 
   <ul>
     <li>No tracking, no analytics, no advertising, and no account of its own.</li>
     <li>Your calendars go between your device and Google, and nowhere else.</li>
-    <li>Your events, your calendar list and the calendars you chose to show are stored on your device. The widgets read the same saved events and the same Google sign-in, on the same device.</li>
-    <li>The sign-in Google gives Day is kept in your device's keychain.</li>
+    <li>Your events and your calendar list are stored on your device. The widgets read the same saved events and the same Google sign-in, on the same device.</li>
+    <li>Your Google sign-in is kept in iCloud Keychain, which is end-to-end encrypted, so adding an account on one device adds it on your others. Without iCloud Keychain it stays in this device's keychain.</li>
+    <li>Which calendars you show, and their icons, sync through iCloud under coded keys that contain no calendar or email address.</li>
+    <li>Google's change notice includes the calendar's address, which for your main calendar is your email address. Day's server reads it in passing and doesn't keep it.</li>
     <li>Day asks Google for read-only access to your calendars and for your email address, which it shows beside each account. It cannot add, change or delete anything in Google Calendar.</li>
-    <li>Removing an account in Day deletes its saved events and its sign-in from your device. You can also end Day's access at any time from your Google account's security settings.</li>
+    <li>Removing an account in Day removes it from all your devices: its sign-in, its saved events and its calendar settings. You can also end Day's access at any time from your Google account's security settings.</li>
     <li>Open in Google Calendar and Join hand a link to Google Calendar, your browser or the call app. Their own policies apply from there.</li>
   </ul>
 
   <p>Day's use and transfer to any other app of information received from Google APIs will adhere to the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including the Limited Use requirements.</p>
 
-  <p>App Store privacy label: <strong>Data Not Collected</strong>.</p>
+  <p>App Store privacy label: <strong>Data Not Linked to You</strong> (a device identifier, used to deliver updates to your calendars).</p>
 
   <p class="fine">Questions? Open an issue at <a href="https://github.com/spashii/day/issues">github.com/spashii/day/issues</a>.<br>Last updated: 2026-11-05.</p>
 </main>

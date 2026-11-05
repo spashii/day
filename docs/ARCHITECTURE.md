@@ -12,6 +12,8 @@ Core/                       Swift package, Foundation only
     Google/                 OAuth with PKCE, token store protocol, Calendar API client, decoding
     Sync/                   incremental sync with Google's tokens, cache files, the widget's read (docs/SYNC.md)
     Rules/                  pure functions from events to marks, rows and text
+    Accounts/               sign in once: the shared keychain items that are the account list, the move of old items, revocation, and the iCloud calendar settings
+    Push/                   the device half of the push relay (channels, registration) and the latency log
   Sources/day-cli/          prints a fixture's days through the rules
   Tests/DayCoreTests/
     Fixtures/               invented-week.json and recorded Google responses (all invented)
@@ -38,7 +40,7 @@ Generated files stay out of git: `app/Day.xcodeproj`, every `Info.plist` and `.e
 |---|---|---|---|
 | `DayMac` | `Day.app`, `io.github.spashii.day`, macOS 26 | `app/Mac`, `app/Shared` | Regular app with a Dock icon, unsandboxed. App Group `JMCP69LCSU.io.github.spashii.day`, which carries only the desktop widget's snapshot; the Team ID prefix is authorised by the Developer ID signature, so no provisioning profile is needed, and a build signed without that team leaves the group alone. URL scheme `day`. Embeds the desktop widget. Sparkle 2.10.1 pinned exactly. Debug is signed with the "Blend Dev" identity when it exists (`tools/build.sh`), ad hoc otherwise. The hardened runtime is off in Debug, because library validation refuses Sparkle under a certificate with no team; Release keeps it for notarization. |
 | `DayPhone` | `Day.app`, `io.github.spashii.day`, iOS 26, iPhone only | `app/iPhone`, `app/Shared` | App Group `group.io.github.spashii.day`, URL schemes `day` and the reversed Google client ID, background fetch with task `io.github.spashii.day.refresh`. Embeds the widget. |
-| `DayWidget` | `DayWidget.appex`, `io.github.spashii.day.widget` | `app/Widget`, `app/Shared/Model/KeychainTokenStore.swift` | Same App Group, no Data Protection entitlement (it would hide the widget while the phone is locked). Does not compile the shared views or stores. |
+| `DayWidget` | `DayWidget.appex`, `io.github.spashii.day.widget` | `app/Widget`, `app/Shared/Model/KeychainTokenStore.swift` | Same App Group and the keychain group of the synced sign-ins, no Data Protection entitlement (it would hide the widget while the phone is locked). Does not compile the shared views or stores. |
 | `DayMacWidget` | `DayMacWidget.appex`, `io.github.spashii.day.widget`, macOS 26 | `app/MacWidget`, `app/Mac/WidgetSnapshotWriter.swift`, `app/Shared/Model/Colors.swift`, `app/Widget/NextDemo.swift` | The desktop widget "Today". Sandboxed, as every Mac extension must be, with the same App Group as `DayMac`. Reads only the snapshot the app copies into the group; holds no tokens and never goes online. Signed like the app, with the same Debug and Release split for the hardened runtime and the debugger entitlement. |
 
 All four link `DayCore` and bundle `invented-week.json`. Swift 6 language mode everywhere, with no default actor isolation: Core is `Sendable` and nonisolated, `CalendarStore` and its implementations are `@MainActor`.

@@ -30,6 +30,13 @@
 #                 Mac release, and a failed upload can be repeated with --iphone --publish.
 #   --skip-tests  leaves out the DayCore tests; not allowed with --publish.
 #
+# Mac profile: the app claims the keychain group, the iCloud key-value store and push, which
+# macOS lets run only with a Developer ID provisioning profile that grants them. The profile
+# is $HOME/.blend-signing/Day_DeveloperID.provisionprofile, or DAY_MAC_PROFILE. It is checked
+# before anything is built, installed for Xcode, embedded in the app, and the signed app is
+# checked for the entitlements. Without it the app is built with the App Group alone, as the
+# Debug build runs: --publish stops, anything else warns.
+#
 # Environment: DAY_SIGN_ID and DAY_NOTARY_PROFILE use an identity and a notarytool profile
 # from your login keychain instead of the blend-release keychain. DAY_SPARKLE_DIR and
 # DAY_SPARKLE_KEY locate Sparkle's tools and the update signing key. DAY_ASC_KEY,
@@ -137,6 +144,53 @@ if $canNotarize && [[ -f $sparkleKey && -x $sparkle/bin/sign_update ]]; then
   canFeed=true
 fi
 
+# The Mac provisioning profile (see Mac profile above). `macProfileName` stays empty without
+# one, and the build then claims the App Group alone (Mac/DayNoProfile.entitlements).
+macProfile=${DAY_MAC_PROFILE:-$signing/Day_DeveloperID.provisionprofile}
+macProfileName=
+macProfileProblem=
+if $doMac && ! $dry; then
+  if [[ ! -f $macProfile ]]; then
+    macProfileProblem="no Developer ID provisioning profile at $macProfile (DAY_MAC_PROFILE)"
+  else
+    macProfilePlist=$(mktemp -t day-profile)
+    if ! security cms -D -i $macProfile > $macProfilePlist 2>/dev/null; then
+      macProfileProblem="$macProfile is not a provisioning profile"
+    else
+      # The profile has to grant every entitlement the app claims, for this app, and be valid.
+      pb=/usr/libexec/PlistBuddy
+      profileValue() { $pb -c "Print :$1" $macProfilePlist 2>/dev/null || true }
+      if [[ $(profileValue Entitlements:com.apple.application-identifier) != JMCP69LCSU.io.github.spashii.day ]]; then
+        macProfileProblem="$macProfile is not for JMCP69LCSU.io.github.spashii.day"
+      fi
+      for key in keychain-access-groups com.apple.security.application-groups \
+        com.apple.developer.ubiquity-kvstore-identifier com.apple.developer.aps-environment; do
+        [[ -n $(profileValue Entitlements:$key) ]] ||
+          macProfileProblem="$macProfile does not grant $key"
+      done
+      [[ $(profileValue Entitlements:com.apple.developer.aps-environment) == production ]] ||
+        macProfileProblem="$macProfile does not grant push in production"
+      expires=$(plutil -extract ExpirationDate raw -o - $macProfilePlist 2>/dev/null || true)
+      [[ -n $expires && $(date -j -u -f '%Y-%m-%dT%H:%M:%SZ' $expires +%s 2>/dev/null || echo 0) -gt $(date +%s) ]] ||
+        macProfileProblem="$macProfile has expired"
+      if [[ -z $macProfileProblem ]]; then
+        macProfileName=$(profileValue Name)
+        macProfileUUID=$(profileValue UUID)
+        for dir in "$HOME/Library/MobileDevice/Provisioning Profiles" \
+          "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"; do
+          mkdir -p $dir
+          cp $macProfile "$dir/$macProfileUUID.provisionprofile"
+        done
+      fi
+    fi
+    rm -f $macProfilePlist
+  fi
+  if [[ -n $macProfileProblem ]]; then
+    $publish && die "Not published: $macProfileProblem."
+    print -u2 -- "warning: $macProfileProblem; the Mac app is built without keychain sharing, iCloud settings and push."
+  fi
+fi
+
 ascKey=
 ascKeyID=
 ascIssuer=
@@ -175,6 +229,7 @@ if $publish; then
       die "v$version is already released; raise VERSION."
     fi
     $canFeed || die "Not published: a Mac release needs the Developer ID, a notarytool profile and the update key."
+    [[ -n $macProfileName ]] || die "Not published: the Mac app needs a Developer ID provisioning profile (${macProfileProblem:-none found})."
   fi
   if $doPhone; then
     $canUpload || die "Not published: the iPhone build needs an App Store Connect key in $signing (AuthKey_KEYID.p8 and asc-issuer-id)."
@@ -221,12 +276,34 @@ buildMac() {
     flags=(ENABLE_HARDENED_RUNTIME=NO)
     [[ $identity != - ]] && signFlags=($keychainFlags)
   fi
+  # The profile's name reaches only the app (app/project.yml); a build setting given here
+  # would reach the widget too.
+  local profileFlags=()
+  if [[ -n $macProfileName ]]; then
+    profileFlags=(DAY_MAC_PROFILE_NAME="$macProfileName")
+  else
+    print -r -- '<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict><key>com.apple.security.application-groups</key><array><string>JMCP69LCSU.io.github.spashii.day</string></array></dict></plist>' \
+      > app/Mac/DayNoProfile.entitlements
+    profileFlags=(DAY_MAC_ENTITLEMENTS=Mac/DayNoProfile.entitlements)
+  fi
   xcodebuild -project app/Day.xcodeproj -scheme DayMac -configuration Release \
     -destination "platform=macOS,arch=arm64" -derivedDataPath $out/xcode-mac -quiet \
-    MARKETING_VERSION=$version CURRENT_PROJECT_VERSION=$number \
+    MARKETING_VERSION=$version CURRENT_PROJECT_VERSION=$number $profileFlags \
     CODE_SIGN_IDENTITY="$identity" ${signFlags:+OTHER_CODE_SIGN_FLAGS="$signFlags"} $flags build
   local app=$out/xcode-mac/Build/Products/Release/Day.app
   requireClient $app/Contents/Info.plist
+  if [[ -n $macProfileName ]]; then
+    [[ -f $app/Contents/embedded.provisionprofile ]] ||
+      die "$app has no embedded.provisionprofile: Xcode did not embed $macProfileName."
+    local claimed key
+    claimed=$(codesign -d --entitlements - $app 2>&1 || true)
+    for key in keychain-access-groups com.apple.developer.ubiquity-kvstore-identifier \
+      com.apple.developer.aps-environment; do
+      [[ $claimed == *$key* ]] || die "$app does not carry $key; the profile $macProfileName was not applied."
+    done
+  fi
   # Xcode signs the Sparkle framework it embeds but not the helpers inside it, and
   # notarization needs every one signed with the Developer ID. This is the order Sparkle's
   # documentation gives for an app that is not sandboxed; the app is signed again last, since
@@ -268,7 +345,11 @@ buildMac() {
   fi
   ln -s /Applications $stage/Applications
   dmg=$out/Day-$version.dmg
-  hdiutil create -quiet -volname "Day $version" -srcfolder $stage -fs HFS+ -format UDZO -ov $dmg
+  # LZFSE rather than zlib: hdiutil writes some apps into a zlib image that it cannot read
+  # back, while exiting 0. The image is verified either way, so a broken one stops here and
+  # never reaches notarization or the feed.
+  hdiutil create -quiet -volname "Day $version" -srcfolder $stage -fs HFS+ -format ULFO -ov $dmg
+  hdiutil verify -quiet $dmg || die "hdiutil wrote an unreadable image: $dmg"
   if [[ $identity != - ]]; then
     codesign --sign "$identity" $signFlags $dmg
   fi

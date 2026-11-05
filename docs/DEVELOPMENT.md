@@ -36,7 +36,7 @@ An unverified app shows Google's warning screen once per account and is capped a
 
 ## Where Day keeps its data
 
-Each account's Google sign-in is a keychain item under the service `io.github.spashii.day.google` (`DayIdentifiers.keychainService`). Events are plain files in the app's own folder: `~/Library/Application Support/Day` on the Mac, and the App Group container on the iPhone, where the widget reads the snapshot the app writes. The Mac app copies that snapshot into its own App Group, `JMCP69LCSU.io.github.spashii.day`, for the desktop widget. If Day was deleted before its accounts were removed, search Keychain Access for the service name and delete the items. [ARCHITECTURE.md](ARCHITECTURE.md) has the rest.
+Each account's Google sign-in is a synchronizable keychain item under the service `io.github.spashii.day.account` in the access group `JMCP69LCSU.io.github.spashii.day.shared`, which iCloud Keychain carries to the person's other devices; this device's access token is a second item under `io.github.spashii.day.access`, and a removal's pending revocation a third under `io.github.spashii.day.revoke`. Builds before sign-in-once kept it under `io.github.spashii.day.google` (`DayIdentifiers.keychainService`), which a refresh moves into the shared item once Google accepts it. The Mac's Debug build claims no keychain group and keeps its sign-ins in the login keychain under `io.github.spashii.day.google.local`. Events are plain files in the app's own folder: `~/Library/Application Support/Day` on the Mac, and the App Group container on the iPhone, where the widget reads the snapshot the app writes. The Mac app copies that snapshot into its own App Group, `JMCP69LCSU.io.github.spashii.day`, for the desktop widget. If Day was deleted before its accounts were removed, search Keychain Access for the service names above and delete the items. [ARCHITECTURE.md](ARCHITECTURE.md) has the rest.
 
 ## Tests
 
@@ -80,6 +80,7 @@ Day goes out exactly as [Blend](https://github.com/spashii/blend) does: a Develo
 - the Developer ID Application identity in the keychain `blend-release`, unlocked by the password in `~/.blend-signing/keychain-password`, which is how a script over SSH can sign;
 - the notarytool profile `blend-notary`;
 - Sparkle's tools in `~/.blend-signing/sparkle-2.10.1` and the update signing key in `~/.blend-signing/sparkle-private-key`. Its public half is `SUPublicEDKey` in `app/project.yml`. Losing the key means installed copies can never take another update.
+- A Developer ID provisioning profile for `io.github.spashii.day` in `~/.blend-signing/Day_DeveloperID.provisionprofile` (or `DAY_MAC_PROFILE`): the profile "Day Developer ID", of type Developer ID (`MAC_APP_DIRECT` in the App Store Connect API) with the Developer ID Application certificate, made after the App ID has Push Notifications, App Groups and iCloud enabled, granting Keychain Sharing for `JMCP69LCSU.io.github.spashii.day.shared`, iCloud key-value storage, the App Group and Push Notifications in production. The Mac app claims all of these, and macOS kills it without a profile that grants them. `tools/release.sh` checks the profile before it builds, installs it for Xcode, and checks the signed app for the entitlements; without one it builds the app with the App Group alone and `--publish` stops.
 
 With those in place, `tools/release.sh --mac` signs the app, its desktop widget and the Sparkle helpers inside it, notarizes and staples the app and the image, signs the image for Sparkle, and writes the release into `site/appcast.xml` and `Casks/day.rb` for you to read. `DAY_SIGN_ID` and `DAY_NOTARY_PROFILE` use an identity and profile from the login keychain instead.
 
@@ -87,10 +88,10 @@ With those in place, `tools/release.sh --mac` signs the app, its desktop widget 
 
 The build goes to TestFlight through `xcodebuild archive` and `-exportArchive` with the method `app-store-connect`. Set up once:
 
-1. At developer.apple.com, register the App IDs `io.github.spashii.day` and `io.github.spashii.day.widget`, and the App Group `group.io.github.spashii.day`, with the App Groups capability on both. Or sign in to Xcode once on the Mac so automatic signing registers them.
-2. In App Store Connect, create the app record "Day" for iOS with the bundle ID `io.github.spashii.day`.
+1. At developer.apple.com, register the App IDs `io.github.spashii.day` and `io.github.spashii.day.widget` for every platform, with App Groups and Push Notifications on both and iCloud on the app, and the App Group `group.io.github.spashii.day` on both. Or sign in to Xcode once on the Mac so automatic signing registers them.
+2. In App Store Connect, create the app record for iOS with the bundle ID `io.github.spashii.day` and the SKU `day-ios`. It is named "Day: Calendars as One", since "Day" is taken.
 3. Create an App Store Connect API key (Users and Access, Integrations) and put the downloaded `AuthKey_KEYID.p8` in `~/.blend-signing/`, with the issuer ID in a file there called `asc-issuer-id`. `DAY_ASC_KEY`, `DAY_ASC_KEY_ID` and `DAY_ASC_ISSUER` name them elsewhere.
-4. An Apple Distribution identity in the `blend-release` keychain, unless Xcode manages the certificate through the API key.
+4. An Apple Distribution identity in the `blend-release` keychain, unless Xcode manages the certificate through the API key. The archive is signed for development first, and over SSH the login keychain stays locked, so its Apple Development identity has to be in `blend-release` too, or the archive has to run in the logged-in session.
 
 `tools/release.sh --iphone` then exports an `.ipa` into `build/release/iphone`. TestFlight builds expire after 90 days, so a release at least every 90 days keeps the phone app installed.
 

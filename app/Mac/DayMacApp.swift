@@ -10,6 +10,8 @@ struct DayMacApp: App {
     private let launch = MacLaunch.shared
     @State private var showsMenuBarItem = DayMacApp.showsMenuBarItem
 
+    init() { LatencyCommand.runIfAsked() }
+
     /// A snapshot run draws into files and shows nothing, so it adds no item beside the one
     /// of the Day that is running.
     private static var showsMenuBarItem: Bool {

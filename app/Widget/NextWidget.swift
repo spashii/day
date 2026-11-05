@@ -13,5 +13,6 @@ struct NextWidget: Widget {
         .configurationDisplayName("Next")
         .description("Your next event, from every Google calendar.")
         .supportedFamilies([.accessoryInline, .accessoryRectangular, .accessoryCircular])
+        .pushHandler(DayWidgetPushHandler.self)
     }
 }

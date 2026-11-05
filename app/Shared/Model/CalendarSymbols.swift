@@ -11,11 +11,13 @@ import SwiftUI
 
 /// The symbols the person has given their calendars, as the views read and change them.
 ///
-/// Chosen on this device and kept in `calendar-symbols.json` in the shared folder, never in
-/// Google. On iPhone that folder is the App Group container, so the Lock Screen widget reads
-/// the same file; choosing a symbol asks WidgetKit to redraw it. On the Mac the folder is the
-/// app's own, so a copy of the file goes to the App Group for the desktop widget
-/// (`WidgetSnapshotWriter`). A calendar with no symbol wears its color dot.
+/// Shared by every device on the Apple ID through the iCloud key-value store, one entry per
+/// calendar (`CloudCalendarSettings`), and never kept in Google. This device's copy is
+/// `calendar-symbols.json` in the shared folder, which the widgets read. On iPhone that folder
+/// is the App Group container, so the Lock Screen widget reads the same file; a change asks
+/// WidgetKit to redraw it. On the Mac the folder is the app's own, so a copy of the file goes
+/// to the App Group for the desktop widget (`WidgetSnapshotWriter`). A calendar with no symbol
+/// wears its color dot.
 ///
 /// A single `shared` instance serves the whole app, so views need no injection; previews and
 /// screenshots hand a private in-memory one to the environment instead, which writes nothing.
@@ -27,6 +29,9 @@ final class CalendarSymbols {
     private(set) var map: CalendarSymbolMap
 
     @ObservationIgnored private let cache: CacheDirectory?
+    /// Where a symbol the person chooses goes for the other devices. `AppModel.live()` sets it;
+    /// previews, screenshots and the fixture leave it nil, so they never write to iCloud.
+    @ObservationIgnored var cloud: CloudCalendarSettings?
 
     /// Reads the file in `cache` now, so the first frame already draws the symbols. A nil
     /// `cache` keeps everything in memory, starting from `map`.
@@ -55,10 +60,19 @@ final class CalendarSymbols {
     func set(_ symbol: CalendarSymbol?, for calendar: CalendarID) {
         var next = map
         next.set(symbol, for: calendar)
+        guard next != map else { return }
+        save(next)
+        cloud?.setSymbol(symbol?.name, for: calendar)
+    }
+
+    /// Takes the symbols another device chose, as `CloudCalendarSettings.reconcile` laid them
+    /// over this device's.
+    func replace(with next: CalendarSymbolMap) {
         save(next)
     }
 
-    /// Drops a removed account's symbols, so adding it back starts from color dots.
+    /// Drops a removed account's symbols on this device, so adding it back starts from color
+    /// dots. The account's entries in iCloud are cleared where it is removed.
     func forget(account: AccountID) {
         var next = map
         next.forget(account)

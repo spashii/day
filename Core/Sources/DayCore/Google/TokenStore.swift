@@ -67,8 +67,19 @@ public struct StoredToken: Codable, Hashable, Sendable {
 /// tests. Keyed by the account's `sub`, which never changes even when the email does.
 public protocol TokenStore: Sendable {
     func token(for account: AccountID) throws -> StoredToken?
+    /// A refreshed access token for an account that is already signed in. It never adds an
+    /// account: a refresh that finishes after the account was removed must leave nothing
+    /// behind.
     func save(_ token: StoredToken, for account: AccountID) throws
+    /// A token from a sign-in: the only way an account is added.
+    func signIn(_ token: StoredToken, for account: AccountID) throws
     func removeToken(for account: AccountID) throws
+    /// The shared keychain store behind this one, when there is one. The account list, the
+    /// move of old items, the refused-token note and the revocation queue work on it, so a
+    /// store that wraps another (the apps' `KeychainTokenStore`) must hand it on: the engine
+    /// is given the wrapper and would otherwise find none of it. Required, with no default,
+    /// so a new store cannot forget.
+    var sharedStore: SharedTokenStore? { get }
 }
 
 /// Tokens in memory, for tests and for running without a keychain.
@@ -87,7 +98,13 @@ public final class MemoryTokenStore: TokenStore {
         tokens.withLock { $0[account] = token }
     }
 
+    public func signIn(_ token: StoredToken, for account: AccountID) throws {
+        tokens.withLock { $0[account] = token }
+    }
+
     public func removeToken(for account: AccountID) throws {
         _ = tokens.withLock { $0.removeValue(forKey: account) }
     }
+
+    public var sharedStore: SharedTokenStore? { nil }
 }

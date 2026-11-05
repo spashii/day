@@ -10,6 +10,7 @@ import SwiftUI
 /// configured; otherwise `AppModel` runs on the real engine.
 @main
 struct DayApp: App {
+    @UIApplicationDelegateAdaptor(PhoneAppDelegate.self) private var appDelegate
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {

@@ -52,7 +52,7 @@ final class AppModel: CalendarStore {
     private(set) var calendar: Calendar
 
     /// What the screen says about fetching. Every refresh's outcome shows until the next good
-    /// one; `Loading…` shows only while an account exists and nothing has ever been fetched.
+    /// one; `Loading…` shows only while a signed-in account has never been fetched.
     var status: StoreStatus {
         switch outcome {
         case .offline:
@@ -60,7 +60,10 @@ final class AppModel: CalendarStore {
         case .unreachable:
             return .unreachable
         case .current, nil:
-            let waiting = derived.data.lastFetchedAt == nil && accounts.contains { !$0.signedOut }
+            // An account that arrived from another device waits here too, until its first read.
+            let waiting = accounts.contains {
+                !$0.signedOut && derived.data.fetchedAtByAccount[$0.id] == nil
+            }
             return waiting ? .loading : .current
         }
     }
@@ -142,7 +145,9 @@ final class AppModel: CalendarStore {
         guard let auth = GoogleAuth(bundle: bundle) else { return nil }
         let engine = SyncEngine(
             auth: auth, tokens: KeychainTokenStore(), cache: cacheDirectory())
-        return AppModel(engine: engine)
+        let model = AppModel(engine: engine)
+        model.shareSettings()
+        return model
     }
 
     /// The shared folder (the App Group on iPhone, so the widget reads it too). A build
@@ -185,6 +190,7 @@ final class AppModel: CalendarStore {
         pendingVisibility[id] = PendingToggle(visible: visible, version: version)
         changes += 1
         apply(derived.data)
+        settingsCloud?.setVisible(visible, for: id)
         enqueue { [self] in
             try? await engine.setVisible(visible, calendar: id)
             if pendingVisibility[id]?.version == version { pendingVisibility[id] = nil }
@@ -211,12 +217,20 @@ final class AppModel: CalendarStore {
     /// short says nothing about Google, so it leaves the line on screen as it was.
     private func sync(inBackground: Bool = false) async -> SyncReport {
         lastRefreshAttempt = clock()
+        // Accounts added or removed on another device join or leave first, so a removed one
+        // is never read and marked signed out.
+        await reconcileAccounts()
         let mark = changes
         let report = inBackground
             ? await engine.refreshInBackground(within: Self.backgroundBudget)
             : await engine.refresh()
         if !Task.isCancelled { outcome = report.outcome }
+        PushSync.shared.didSync(self, engine: engine, from: derived.data, report: report)
         apply(report.data, startedAt: mark)
+        // Calendars this read listed for the first time pick up the settings other devices
+        // gave them.
+        reconcileSettings()
+        retryRevocations()
         let accounts = report.data.accounts
         Self.refreshLog.notice(
             "refresh \(String(describing: report.outcome), privacy: .public): \(accounts.count, privacy: .public) accounts, \(accounts.filter(\.signedOut).count, privacy: .public) signed out"
@@ -238,6 +252,12 @@ final class AppModel: CalendarStore {
         if let last = lastRefreshAttempt,
             (0..<Self.foregroundThrottle).contains(clock().timeIntervalSince(last))
         {
+            // No read this time, but an account another device added or removed still shows,
+            // and one it added is read at once.
+            Task {
+                let found = await reconcileAccounts()
+                if !found.added.isEmpty || !found.restored.isEmpty { await refresh() }
+            }
             return
         }
         Task { await refresh() }
@@ -283,6 +303,8 @@ final class AppModel: CalendarStore {
     func start() {
         guard !started else { return }
         started = true
+        PushSync.shared.start(model: self, engine: engine)
+        retryRevocations()
 
         tasks.append(
             Task { [weak self] in
@@ -327,6 +349,7 @@ final class AppModel: CalendarStore {
             // A Mac that slept has stale data and a stale clock when it wakes.
             observe([NSWorkspace.didWakeNotification], center: NSWorkspace.shared.notificationCenter) {
                 [weak self] in
+                PushSync.shared.canReceivePushAgain()
                 self?.tick()
                 Task { await self?.refresh() }
             }
@@ -365,6 +388,7 @@ final class AppModel: CalendarStore {
     private func networkDidChange(satisfied: Bool) {
         defer { networkSatisfied = satisfied }
         guard satisfied, networkSatisfied == false else { return }
+        PushSync.shared.canReceivePushAgain()
         Task { await refresh() }
     }
 
@@ -436,16 +460,139 @@ final class AppModel: CalendarStore {
         Task { await refresh() }
     }
 
+    /// Removes the account everywhere: its shared keychain item (iCloud Keychain carries the
+    /// deletion to every device), its push channels, its settings in iCloud and, last, its
+    /// grant at Google. Each other device then drops it on its next pass over the keychain.
+    /// Queued like the toggles, so adding the account back waits until its old grant is
+    /// revoked and cannot be caught by the revocation.
+    ///
+    /// The refresh token goes into a device-only keychain item before anything is deleted and
+    /// leaves it only when Google confirms the revocation, so a removal made offline is
+    /// retried (`retryRevocations`) and the grant does not outlive the account.
     func removeAccount(_ id: AccountID) {
         pendingRemovals.insert(id)
         changes += 1
         apply(derived.data)
         enqueue { [self] in
-            try? await engine.removeAccount(id)
+            // Channels first, while the token is still in the keychain and Google honours it.
+            let token = engine.storedToken(for: id)
+            await stopPushChannels?(id, token)
+            let queued = token.map { engine.queueRevocation($0, for: id) } ?? false
+            let removed = (try? await engine.removeAccount(id)) != nil
             pendingRemovals.remove(id)
             changes += 1
             apply(engine.load())
             reloadWidgetsIfNeeded(engine.widgetSnapshot())
+            guard removed else {
+                // A token that is still in the keychain is still in use: revoking it would
+                // sign the account out everywhere.
+                if queued, engine.storedToken(for: id) != nil { engine.cancelRevocation(for: id) }
+                return
+            }
+            settingsCloud?.forget(id)
+            CalendarSymbols.shared.forget(account: id)
+            if queued {
+                await engine.retryRevocations()
+            } else if let token {
+                await engine.revoke(token)
+            }
+        }
+    }
+
+    /// Tries the revocations that could not reach Google before: on launch and after each
+    /// refresh. Cheap when there are none.
+    private func retryRevocations() {
+        Task { [engine] in await engine.retryRevocations() }
+    }
+
+    // MARK: Accounts on every device
+
+    /// The person's calendar settings in iCloud, shared with their other devices. Nil until
+    /// `shareSettings()`, so tests and previews never write to iCloud.
+    @ObservationIgnored private(set) var settingsCloud: CloudCalendarSettings?
+    @ObservationIgnored private var settingsObserver: SettingsObservation?
+
+    /// The push client's hook for an account leaving this device. Removed here, it runs before
+    /// anything is deleted, with the account's tokens still in the keychain and passed in, and
+    /// is awaited, so the client can stop the account's channels with Google before the grant
+    /// is revoked. Removed on another device, it gets nil after the account has left: that
+    /// device revoked the grant, so the channels can only lapse, and the client drops them
+    /// from its own records.
+    @ObservationIgnored var stopPushChannels: (@MainActor (AccountID, StoredToken?) async -> Void)?
+
+    /// Shares toggles and symbols through the iCloud key-value store: each change is written
+    /// there as well as to the files, and changes from other devices are laid over the files
+    /// as iCloud delivers them. The first pass copies this device's files into iCloud. A build
+    /// without the store's entitlement keeps settings in the files alone.
+    func shareSettings() {
+        guard settingsCloud == nil, UbiquitousSettings.isAvailable else { return }
+        let cloud = CloudCalendarSettings(cloud: UbiquitousSettings.shared)
+        settingsCloud = cloud
+        CalendarSymbols.shared.cloud = cloud
+        settingsObserver = UbiquitousSettings.shared.observe { [weak self] change in
+            Task { @MainActor [weak self] in self?.settingsDidChange(change) }
+        }
+        reconcileSettings()
+    }
+
+    /// iCloud changed the key-value store. Why decides what to do (`removedKeys(for:)`): the
+    /// first download and an account switch make the store look empty, which must not clear
+    /// the settings in the files, so they reconcile again instead, which gives the store the
+    /// settings it lacks now that it has finished.
+    private func settingsDidChange(_ change: SettingsChange) {
+        guard let cloud = settingsCloud else { return }
+        guard let removed = cloud.removedKeys(for: change) else {
+            Self.settingsLog.notice("iCloud settings are over their quota; the change is skipped")
+            return
+        }
+        reconcileSettings(removed: removed)
+    }
+
+    private static let settingsLog = Logger(subsystem: DayIdentifiers.bundleID, category: "settings")
+
+    /// Brings the account list in line with the shared keychain (`SyncEngine.reconcileAccounts`)
+    /// and draws the result: on every refresh, and on return to the front when the refresh is
+    /// skipped. An account removed on another device leaves with its cache and settings here.
+    @discardableResult
+    func reconcileAccounts() async -> AccountChanges {
+        let found = await engine.reconcileAccounts()
+        guard found.changesAccounts else { return found }
+        changes += 1
+        apply(engine.load())
+        for id in found.removed { CalendarSymbols.shared.forget(account: id) }
+        reloadWidgetsIfNeeded(engine.widgetSnapshot())
+        // Not awaited: the refresh this pass usually precedes should not wait on the push
+        // server.
+        if let stop = stopPushChannels {
+            for id in found.removed { Task { await stop(id, nil) } }
+        }
+        return found
+    }
+
+    /// Lays the settings other devices chose over this device's files and gives iCloud the
+    /// ones only this device has (`CloudCalendarSettings.reconcile`). `removed` are keys
+    /// another device just removed. Queued behind the toggles, so the toggle file it reads
+    /// already holds the person's last toggle.
+    func reconcileSettings(removed: Set<String> = []) {
+        guard let cloud = settingsCloud else { return }
+        enqueue { [self] in
+            let data = derived.data
+            let known = data.accounts.flatMap { data.calendarsByAccount[$0.id] ?? [] }.map(\.id)
+            let local = CalendarSettings(
+                visibility: engine.storedVisibility(), symbols: CalendarSymbols.shared.map)
+            let next = cloud.reconcile(local, known: known, removed: removed)
+            // Before any suspension, so a symbol chosen meanwhile is not written over.
+            if next.symbols != local.symbols { CalendarSymbols.shared.replace(with: next.symbols) }
+            guard next.visibility != local.visibility else { return }
+            let shownBefore = derived.visible
+            try? await engine.replaceVisibility(next.visibility)
+            changes += 1
+            var current = derived.data
+            current.visibility = next.visibility
+            apply(current)
+            reloadWidgetsIfNeeded(engine.widgetSnapshot())
+            // A calendar another device showed reads its events now, as a toggle here would.
+            if !derived.visible.isSubset(of: shownBefore) { Task { await refresh() } }
         }
     }
 

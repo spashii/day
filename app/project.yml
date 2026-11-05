@@ -31,8 +31,9 @@ packages:
 targets:
   # Day for macOS: a regular app with a Dock icon, unsandboxed, released with Developer ID.
   # Embeds the desktop widget and shares one App Group with it. The group's identifier
-  # carries the Team ID, which the Developer ID signature itself authorises, so neither
-  # target needs a provisioning profile.
+  # carries the Team ID, which the Developer ID signature itself authorises; the app's
+  # keychain group and iCloud store need a Developer ID provisioning profile (see its
+  # entitlements), the widget none.
   DayMac:
     type: application
     platform: macOS
@@ -75,13 +76,26 @@ targets:
           - CFBundleURLName: io.github.spashii.day
             CFBundleURLSchemes:
               - day
-    # The App Group only: the app stays unsandboxed. It copies the widget snapshot into the
-    # group (Mac/WidgetSnapshotWriter.swift); its cache stays in Application Support.
+    # The app stays unsandboxed. It copies the widget snapshot into the App Group
+    # (Mac/WidgetSnapshotWriter.swift); its cache stays in Application Support. The keychain
+    # group holds each Google account's synced sign-in, the same string as on iPhone so both
+    # read one set of items (app/Shared/Model/KeychainTokenStore.swift); the key-value store
+    # holds the calendar settings, again one identifier for both platforms. macOS kills an
+    # app that claims either without a provisioning profile granting it, so Release needs a
+    # Developer ID profile with both, and Debug, signed without one, claims no entitlements:
+    # it keeps tokens in the login keychain and settings on the Mac, as before.
     entitlements:
       path: Mac/Day.entitlements
       properties:
         com.apple.security.application-groups:
           - JMCP69LCSU.io.github.spashii.day
+        keychain-access-groups:
+          - JMCP69LCSU.io.github.spashii.day.shared
+        com.apple.developer.ubiquity-kvstore-identifier: JMCP69LCSU.io.github.spashii.day
+        # Background pushes from Day's relay (push/README.md). Production, the value a
+        # Developer ID profile grants, so that profile needs Push Notifications too. Debug
+        # claims no entitlements and gets no pushes; the timers keep it current.
+        com.apple.developer.aps-environment: production
     settings:
       base:
         PRODUCT_NAME: Day
@@ -101,10 +115,23 @@ targets:
         # Dev". Debug runs without it; Release, signed with the Developer ID, keeps it.
         Debug:
           ENABLE_HARDENED_RUNTIME: NO
+          # See the entitlements above; Xcode also refuses to build them without a profile.
+          # The App Group goes too, which a build without a Team ID never opens anyway
+          # (MacWidgetGroup.isAvailable). Conditional, because XcodeGen sets the plain key
+          # from `entitlements` in every configuration.
+          "CODE_SIGN_ENTITLEMENTS[config=Debug]": ""
         # Xcode otherwise adds the debugger entitlement to every build, and notarization
         # rejects an app that carries it.
         Release:
           CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
+          # tools/release.sh sets DAY_MAC_PROFILE_NAME to the Developer ID provisioning
+          # profile that grants the keychain group, the key-value store and push, and
+          # DAY_MAC_ENTITLEMENTS to Mac/DayNoProfile.entitlements when there is none, so a
+          # build without the profile still builds. Both are build settings of this target
+          # alone: given on the command line, PROVISIONING_PROFILE_SPECIFIER would reach the
+          # widget too.
+          "CODE_SIGN_ENTITLEMENTS[config=Release]": "$(DAY_MAC_ENTITLEMENTS:default=Mac/Day.entitlements)"
+          PROVISIONING_PROFILE_SPECIFIER: "$(DAY_MAC_PROFILE_NAME)"
     dependencies:
       - package: DayCore
         product: DayCore
@@ -113,7 +140,7 @@ targets:
       - target: DayMacWidget
 
   # Day for iPhone. Shares app/Shared with the Mac and embeds the Lock Screen widget; the
-  # App Group carries the widget snapshot and doubles as the keychain access group.
+  # App Group carries the widget snapshot and the old per-device keychain items.
   DayPhone:
     type: application
     platform: iOS
@@ -151,13 +178,28 @@ targets:
               - com.googleusercontent.apps.$(DAY_GOOGLE_CLIENT_ID)
         UIBackgroundModes:
           - fetch
+          # The relay's background push runs a sync (iPhone/AppDelegate.swift).
+          - remote-notification
         BGTaskSchedulerPermittedIdentifiers:
           - io.github.spashii.day.refresh
+        # Documents shows in Files, so a TestFlight build can share its latency log
+        # (Shared/Model/PushLatency.swift). It holds no titles or IDs.
+        UIFileSharingEnabled: true
+        LSSupportsOpeningDocumentsInPlace: true
+    # The keychain group and the key-value store are the Mac app's strings too, so a sign-in
+    # and a calendar setting made on one reach the other.
     entitlements:
       path: iPhone/Day.entitlements
       properties:
         com.apple.security.application-groups:
           - group.io.github.spashii.day
+        keychain-access-groups:
+          - JMCP69LCSU.io.github.spashii.day.shared
+        com.apple.developer.ubiquity-kvstore-identifier: JMCP69LCSU.io.github.spashii.day
+        # Development in every configuration: Xcode signs every iPhone build, archives too,
+        # with a development profile and refuses another value, and the export for App
+        # Store Connect re-signs TestFlight builds with production.
+        aps-environment: development
     settings:
       base:
         PRODUCT_NAME: Day
@@ -200,11 +242,18 @@ targets:
         GoogleClientID: $(DAY_GOOGLE_CLIENT_ID).apps.googleusercontent.com
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    # The app's keychain group, for the synced sign-ins it refreshes with. No key-value store:
+    # the widget reads the settings from the files the app writes.
     entitlements:
       path: Widget/DayWidget.entitlements
       properties:
         com.apple.security.application-groups:
           - group.io.github.spashii.day
+        keychain-access-groups:
+          - JMCP69LCSU.io.github.spashii.day.shared
+        # WidgetKit pushes reach the widget only with this on the extension itself; the
+        # value follows the app's.
+        aps-environment: development
     settings:
       base:
         PRODUCT_NAME: DayWidget
