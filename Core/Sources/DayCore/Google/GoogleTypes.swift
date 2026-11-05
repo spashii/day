@@ -51,6 +51,8 @@ public struct GoogleCalendarListEntry: Decodable, Hashable, Sendable {
     public var timeZone: String?
     public var deleted: Bool?
     public var hidden: Bool?
+    /// The reminders new events on this calendar start with (`ReminderDecoding.swift`).
+    public var defaultReminders: GoogleReminderList?
 }
 
 /// `calendars.get`: the calendar itself, which is where event labels are defined.
@@ -151,4 +153,5 @@ public struct GoogleEvent: Decodable, Hashable, Sendable {
     public var attendees: [Person]?
     public var hangoutLink: String?
     public var conferenceData: ConferenceData?
+    public var reminders: GoogleReminders?
 }

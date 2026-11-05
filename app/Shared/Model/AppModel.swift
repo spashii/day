@@ -467,6 +467,7 @@ final class AppModel: CalendarStore {
             data.visibility.set(toggle.visible, for: id)
         }
         derived = Derived(data: data, calendar: calendar)
+        ReminderScheduler.shared.update(derived.data, calendar: calendar)
     }
 
     /// A toggle shown on screen and not yet written. `version` counts the toggles made of

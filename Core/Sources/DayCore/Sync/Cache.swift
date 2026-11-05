@@ -102,8 +102,10 @@ public struct CacheDirectory: Hashable, Sendable {
 /// full and replaces its events, and the old events stay on screen until it has. Sync
 /// tokens are not touched otherwise.
 public enum CacheFormat {
-    /// 1: files written before the number existed. 2: events keep their guest list.
-    public static let current = 2
+    /// 1: files written before the number existed. 2: events keep their guest list. 3: events
+    /// keep their reminders and calendars their default reminders, so the calendar list is
+    /// read in full again too (`CalendarsFile.format`).
+    public static let current = 3
 }
 
 /// File names, kept in one place so the app, the widget and the tests agree.
@@ -142,6 +144,11 @@ public enum CacheFile {
 /// ahead of the list it describes. Labels change rarely and cost a call per calendar, so they
 /// are read again with the daily full list.
 public struct CalendarsFile: Codable, Hashable, Sendable {
+    /// `CacheFormat.current` when the list was written; 1 for a file that has no number. A
+    /// list from an older format is read in full again, because an incremental read only
+    /// returns the entries that changed, which would leave the rest without what the format
+    /// added.
+    public var format: Int
     /// When Google last answered for the list, in full or with changes.
     public var fetchedAt: Date
     public var labelsFetchedAt: Date?
@@ -157,13 +164,24 @@ public struct CalendarsFile: Codable, Hashable, Sendable {
 
     public init(
         fetchedAt: Date, labelsFetchedAt: Date?, calendars: [CalendarInfo],
-        syncToken: String? = nil, fullSyncAt: Date? = nil
+        syncToken: String? = nil, fullSyncAt: Date? = nil, format: Int = CacheFormat.current
     ) {
+        self.format = format
         self.fetchedAt = fetchedAt
         self.labelsFetchedAt = labelsFetchedAt
         self.calendars = calendars
         self.syncToken = syncToken
         self.fullSyncAt = fullSyncAt
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        format = try c.decodeIfPresent(Int.self, forKey: .format) ?? 1
+        fetchedAt = try c.decode(Date.self, forKey: .fetchedAt)
+        labelsFetchedAt = try c.decodeIfPresent(Date.self, forKey: .labelsFetchedAt)
+        calendars = try c.decode([CalendarInfo].self, forKey: .calendars)
+        syncToken = try c.decodeIfPresent(String.self, forKey: .syncToken)
+        fullSyncAt = try c.decodeIfPresent(Date.self, forKey: .fullSyncAt)
     }
 }
 

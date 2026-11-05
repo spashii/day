@@ -18,13 +18,14 @@ public struct CalendarAPI: Sendable {
     /// the mask, or Google leaves it out and every refresh becomes a full read.
     static let eventFields =
         "nextPageToken,nextSyncToken,items(id,iCalUID,status,summary,description,location,"
+        + "reminders(useDefault,overrides(method,minutes)),"
         + "htmlLink,colorId,eventLabelId,start,end,originalStartTime,recurringEventId,"
         + "transparency,eventType,organizer(self),"
         + "attendees(email,displayName,organizer,self,resource,optional,responseStatus),"
         + "hangoutLink,conferenceData/entryPoints(entryPointType,uri))"
     static let calendarListFields =
         "nextPageToken,nextSyncToken,items(id,summary,summaryOverride,backgroundColor,selected,"
-        + "primary,accessRole,timeZone,deleted,hidden)"
+        + "primary,accessRole,timeZone,deleted,hidden,defaultReminders(method,minutes))"
     /// Google's own limit per page; a five-month window rarely needs a second page.
     static let maxResults = 2500
     /// A runaway guard: no window or change set Day asks for comes near this many pages.

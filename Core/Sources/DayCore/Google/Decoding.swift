@@ -35,7 +35,8 @@ public enum GoogleDecoding {
             accessRole: accessRole(entry.accessRole),
             timeZone: entry.timeZone.flatMap { TimeZone(identifier: $0) != nil ? $0 : nil }
                 ?? "UTC",
-            labels: labels)
+            labels: labels,
+            defaultReminders: defaultReminders(entry.defaultReminders))
     }
 
     /// An account's calendar list in Google's order, with the primary calendar first.
@@ -105,7 +106,7 @@ public enum GoogleDecoding {
         let people = (google.attendees ?? []).filter { !isRoom($0) }
         let me = google.attendees?.first { $0.isSelf == true }
         let others = people.filter { $0.isSelf != true }
-        return Event(
+        var event = Event(
             id: EventID(calendar: calendar.id, googleID: google.id),
             iCalUID: nonEmpty(google.iCalUID) ?? google.id,
             originalStart: google.originalStartTime.flatMap(originalStart),
@@ -126,6 +127,8 @@ public enum GoogleDecoding {
             description: nonEmpty(google.description.map(plainText(fromHTML:))),
             colorKey: colorKey(
                 labelID: google.eventLabelId, colorID: google.colorId, calendar: calendar))
+        event.reminders = reminders(google.reminders)
+        return event
     }
 
     /// Every event of one calendar's page, skipping any without a usable start.

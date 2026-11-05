@@ -13,7 +13,7 @@ Every sentence on the site, in the README and in the App Store listing (`fastlan
 
 - Not "edit", "create", "manage", "plan", "schedule" or "RSVP". Day is read-only. Edits open in Google Calendar.
 - Not "live", "instant" or "always up to date". iOS decides when a widget reloads. The widget shows its data's age when it is stale ("As of 9:12") and falls back to the last events it saved.
-- Not "notifications" or "reminders". Version one has none.
+- Not that reminders arrive at the same moment on every device. Each device schedules its own from what it last synced.
 - Not Apple Calendar, iCloud, Outlook or any calendar that is not Google's.
 - Widgets: the iPhone Lock Screen and the Mac desktop (Today, in small, medium and large). No Home Screen, StandBy or Month widget.
 - Not iPad, Apple Watch, Android or Windows.

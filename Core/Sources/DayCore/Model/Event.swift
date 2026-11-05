@@ -129,6 +129,10 @@ public struct Event: Codable, Hashable, Identifiable, Sendable {
     public var colorKey: ColorKey
     /// Every calendar this event sits on after merging, the kept copy's first.
     public var calendars: [CalendarID]
+    /// Google's popup reminders for the event, which `ReminderSchedule` turns into local
+    /// notifications. Nil when the event reminds nowhere, and in a cache written before
+    /// reminders were kept.
+    public var reminders: EventReminders?
 
     public init(
         id: EventID,
@@ -230,5 +234,6 @@ public struct Event: Codable, Hashable, Identifiable, Sendable {
         description = try c.decodeIfPresent(String.self, forKey: .description)
         colorKey = try c.decodeIfPresent(ColorKey.self, forKey: .colorKey) ?? .gray
         calendars = try c.decodeIfPresent([CalendarID].self, forKey: .calendars) ?? [id.calendar]
+        reminders = try c.decodeIfPresent(EventReminders.self, forKey: .reminders)
     }
 }
