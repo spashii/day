@@ -1,0 +1,38 @@
+# Day's push relay. It has no route and no workers.dev address on purpose:
+# the update host Worker `app-updates` owns apps.idea2prod.in and forwards
+# /day/push and /day/devices here through a service binding.
+name = "day-push"
+main = "src/index.js"
+compatibility_date = "2026-11-01"
+account_id = "ac53e2c9047fd16fe5e94aef5c772a59"
+workers_dev = false
+preview_urls = false
+
+# Off on purpose. Google's notification headers carry the calendar ID (often an
+# email address) in X-Goog-Resource-URI, and invocation logs record request
+# details. Turning this on would put calendar IDs into Cloudflare's log store.
+[observability]
+enabled = false
+
+[vars]
+APNS_TEAM_ID = "JMCP69LCSU"
+APNS_TOPIC = "io.github.spashii.day"
+# One push per install per window; notifications inside a window share it.
+COALESCE_MS = "3000"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "day-push"
+database_id = "144eb897-7620-48f1-a982-ba6e0a51dbd7"
+migrations_dir = "migrations"
+
+[[durable_objects.bindings]]
+name = "COALESCER"
+class_name = "InstallCoalescer"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["InstallCoalescer"]
+
+[triggers]
+crons = ["17 3 * * *"]

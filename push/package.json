@@ -1,0 +1,19 @@
+{
+  "name": "day-push",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "migrate": "wrangler d1 migrations apply day-push --remote",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "^1.5.1",
+    "vitest": "^5.1.0",
+    "wrangler": "^4.157.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "workerd@1.20261103.1": true
+  }
+}

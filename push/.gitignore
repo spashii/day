@@ -1,0 +1,7 @@
+node_modules/
+# wrangler and miniflare local state
+.wrangler/
+# local secrets for wrangler dev
+.dev.vars
+.env
+*.log
