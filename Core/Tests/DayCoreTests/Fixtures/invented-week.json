@@ -1,0 +1,3308 @@
+{
+ "accounts": [
+  {
+   "addedAt": "2026-10-01T10:00:00+02:00",
+   "email": "you@gmail.com",
+   "id": "100000000000000000001",
+   "signedOut": false
+  },
+  {
+   "addedAt": "2026-10-01T10:05:00+02:00",
+   "email": "you@acme.com",
+   "id": "100000000000000000002",
+   "signedOut": false
+  }
+ ],
+ "calendars": [
+  {
+   "accessRole": "owner",
+   "colorHex": "#039BE5",
+   "id": {
+    "account": "100000000000000000001",
+    "googleID": "you@gmail.com"
+   },
+   "isPrimary": true,
+   "name": "Personal",
+   "timeZone": "Europe/Amsterdam"
+  },
+  {
+   "accessRole": "reader",
+   "colorHex": "#0B8043",
+   "id": {
+    "account": "100000000000000000001",
+    "googleID": "en.dutch#holiday@group.v.calendar.google.com"
+   },
+   "name": "Holidays in the Netherlands",
+   "timeZone": "Europe/Amsterdam"
+  },
+  {
+   "accessRole": "reader",
+   "colorHex": "#7CB342",
+   "id": {
+    "account": "100000000000000000001",
+    "googleID": "addressbook#contacts@group.v.calendar.google.com"
+   },
+   "name": "Birthdays",
+   "timeZone": "Europe/Amsterdam"
+  },
+  {
+   "accessRole": "owner",
+   "colorHex": "#4285F4",
+   "id": {
+    "account": "100000000000000000002",
+    "googleID": "you@acme.com"
+   },
+   "isPrimary": true,
+   "labels": {
+    "customer": {
+     "colorHex": "#F4511E",
+     "name": "Customer"
+    }
+   },
+   "name": "you@acme.com",
+   "timeZone": "Europe/Amsterdam"
+  },
+  {
+   "accessRole": "writer",
+   "colorHex": "#8E24AA",
+   "id": {
+    "account": "100000000000000000002",
+    "googleID": "c_7f3e9a1offsites@group.calendar.google.com"
+   },
+   "name": "Team offsites",
+   "selected": false,
+   "timeZone": "Europe/Amsterdam"
+  }
+ ],
+ "events": [
+  {
+   "colorKey": "cyan",
+   "htmlLink": "https://www.google.com/calendar/event?eid=M2U5ZTUzMmQ3YmMyNTEwOTI2ZDIgeW91QGdtYWlsLmNvbQ",
+   "iCalUID": "3e9e532d7bc2510926d2@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000001",
+     "googleID": "you@gmail.com"
+    },
+    "googleID": "3e9e532d7bc2510926d2"
+   },
+   "isOrganizer": true,
+   "kind": "fromGmail",
+   "location": "Amsterdam Schiphol (AMS)",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-02T21:50:00+01:00",
+     "start": "2026-11-02T19:05:00+01:00"
+    }
+   },
+   "title": "Flight to Lisbon (TP 671)"
+  },
+  {
+   "colorKey": "cyan",
+   "htmlLink": "https://www.google.com/calendar/event?eid=YWJlYWFiMTc5NTQ1ZTEyN2MwM2YgeW91QGdtYWlsLmNvbQ",
+   "iCalUID": "abeaab179545e127c03f@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000001",
+     "googleID": "you@gmail.com"
+    },
+    "googleID": "abeaab179545e127c03f"
+   },
+   "isFree": true,
+   "isOrganizer": true,
+   "time": {
+    "allDay": {
+     "endExclusive": "2026-11-06",
+     "start": "2026-11-03"
+    }
+   },
+   "title": "Lisbon"
+  },
+  {
+   "colorKey": "cyan",
+   "htmlLink": "https://www.google.com/calendar/event?eid=MWU4MTNlNzQ5NzA2MzUzNDI1MjggeW91QGdtYWlsLmNvbQ",
+   "iCalUID": "1e813e74970635342528@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000001",
+     "googleID": "you@gmail.com"
+    },
+    "googleID": "1e813e74970635342528"
+   },
+   "isOrganizer": true,
+   "location": "Café Nord\nRua Inventada 4, 1100-053 Lisboa",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-04T13:30:00+01:00",
+     "start": "2026-11-04T12:30:00+01:00"
+    }
+   },
+   "title": "Lunch with Maya"
+  },
+  {
+   "attendeeCount": 5,
+   "attendeeDomains": [
+    "acme.com",
+    "harbor.example"
+   ],
+   "colorKey": "purple",
+   "description": "Q4 numbers and the seed extension.\nDeck: https://harbor.example/deck/q4",
+   "htmlLink": "https://www.google.com/calendar/event?eid=N2hxMms0aW52ZXN0b3IwNCB5b3VAZ21haWwuY29t",
+   "iCalUID": "7hq2k4investor04@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000001",
+     "googleID": "you@gmail.com"
+    },
+    "googleID": "7hq2k4investor04"
+   },
+   "joinURL": "https://meet.google.com/ick-auwh-blm",
+   "response": "needsAction",
+   "time": {
+    "timed": {
+     "authoredZone": "America/New_York",
+     "end": "2026-11-04T15:00:00+01:00",
+     "start": "2026-11-04T14:00:00+01:00"
+    }
+   },
+   "title": "Investor call"
+  },
+  {
+   "colorKey": "cyan",
+   "htmlLink": "https://www.google.com/calendar/event?eid=ZmQ4NTJmZWMyOGM1ODFlMzIzYzkgeW91QGdtYWlsLmNvbQ",
+   "iCalUID": "fd852fec28c581e323c9@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000001",
+     "googleID": "you@gmail.com"
+    },
+    "googleID": "fd852fec28c581e323c9"
+   },
+   "isOrganizer": true,
+   "kind": "fromGmail",
+   "location": "Lisbon Humberto Delgado (LIS)",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Lisbon",
+     "end": "2026-11-06T00:15:00+01:00",
+     "start": "2026-11-05T20:30:00+01:00"
+    }
+   },
+   "title": "Flight to Amsterdam (TP 674)"
+  },
+  {
+   "colorKey": "cyan",
+   "htmlLink": "https://www.google.com/calendar/event?eid=ZTBmOTM3NTYxNDM2ODIyNzY3NGIgeW91QGdtYWlsLmNvbQ",
+   "iCalUID": "e0f9375614368227674b@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000001",
+     "googleID": "you@gmail.com"
+    },
+    "googleID": "e0f9375614368227674b"
+   },
+   "isOrganizer": true,
+   "location": "Tandarts Oost\nVerzonnenstraat 1, Amsterdam",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-07T15:15:00+01:00",
+     "start": "2026-11-07T14:30:00+01:00"
+    }
+   },
+   "title": "Dentist"
+  },
+  {
+   "colorKey": "cyan",
+   "htmlLink": "https://www.google.com/calendar/event?eid=YmVmOTkwMjFhZjEwZmQ5Yjg3OGUgeW91QGdtYWlsLmNvbQ",
+   "iCalUID": "bef99021af10fd9b878e@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000001",
+     "googleID": "you@gmail.com"
+    },
+    "googleID": "bef99021af10fd9b878e"
+   },
+   "isOrganizer": true,
+   "location": "Bistro Lumen\nVoorbeeldlaan 2, Amsterdam",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-07T21:00:00+01:00",
+     "start": "2026-11-07T19:00:00+01:00"
+    }
+   },
+   "title": "Dinner with Maya"
+  },
+  {
+   "colorKey": "cyan",
+   "htmlLink": "https://www.google.com/calendar/event?eid=NTA1NzA4Y2MxYTg2Njg2ZTg1YmUgeW91QGdtYWlsLmNvbQ",
+   "iCalUID": "505708cc1a86686e85be@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000001",
+     "googleID": "you@gmail.com"
+    },
+    "googleID": "505708cc1a86686e85be"
+   },
+   "isOrganizer": true,
+   "location": "Koffie Oost\nFictieplein 3, Amsterdam",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-17T09:00:00+01:00",
+     "start": "2026-11-17T08:30:00+01:00"
+    }
+   },
+   "title": "Coffee with Ana"
+  },
+  {
+   "colorKey": "cyan",
+   "htmlLink": "https://www.google.com/calendar/event?eid=YzlmNWNjYzE3NzAwZjJkMDFjYWQgeW91QGdtYWlsLmNvbQ",
+   "iCalUID": "c9f5ccc17700f2d01cad@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000001",
+     "googleID": "you@gmail.com"
+    },
+    "googleID": "c9f5ccc17700f2d01cad"
+   },
+   "isFree": true,
+   "isOrganizer": true,
+   "time": {
+    "allDay": {
+     "endExclusive": "2026-11-26",
+     "start": "2026-11-23"
+    }
+   },
+   "title": "Berlin"
+  },
+  {
+   "colorKey": "green",
+   "htmlLink": "https://www.google.com/calendar/event?eid=NjFmZjBiMjFjYjg4N2JlZjAwOTYgZW4uZHV0Y2gjaG9saWRheUBncm91cC52LmNhbGVuZGFyLmdvb2dsZS5jb20",
+   "iCalUID": "61ff0b21cb887bef0096@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000001",
+     "googleID": "en.dutch#holiday@group.v.calendar.google.com"
+    },
+    "googleID": "61ff0b21cb887bef0096"
+   },
+   "isFree": true,
+   "time": {
+    "allDay": {
+     "endExclusive": "2026-11-12",
+     "start": "2026-11-11"
+    }
+   },
+   "title": "Sint Maarten"
+  },
+  {
+   "colorKey": "green",
+   "htmlLink": "https://www.google.com/calendar/event?eid=OGY3YTZlMDQ4Nzg5NThmNTEwMzEgZW4uZHV0Y2gjaG9saWRheUBncm91cC52LmNhbGVuZGFyLmdvb2dsZS5jb20",
+   "iCalUID": "8f7a6e04878958f51031@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000001",
+     "googleID": "en.dutch#holiday@group.v.calendar.google.com"
+    },
+    "googleID": "8f7a6e04878958f51031"
+   },
+   "isFree": true,
+   "time": {
+    "allDay": {
+     "endExclusive": "2026-12-06",
+     "start": "2026-12-05"
+    }
+   },
+   "title": "Sinterklaas"
+  },
+  {
+   "colorKey": "green",
+   "htmlLink": "https://www.google.com/calendar/event?eid=ZWQ3OTMxMTJlMTBlXzIwMjYxMTA4IGFkZHJlc3Nib29rI2NvbnRhY3RzQGdyb3VwLnYuY2FsZW5kYXIuZ29vZ2xlLmNvbQ",
+   "iCalUID": "ed793112e10e@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000001",
+     "googleID": "addressbook#contacts@group.v.calendar.google.com"
+    },
+    "googleID": "ed793112e10e_20261108"
+   },
+   "isFree": true,
+   "isRecurring": true,
+   "kind": "birthday",
+   "originalStart": "2026-11-08T00:00:00+00:00",
+   "time": {
+    "allDay": {
+     "endExclusive": "2026-11-09",
+     "start": "2026-11-08"
+    }
+   },
+   "title": "Noor's birthday"
+  },
+  {
+   "colorKey": "green",
+   "htmlLink": "https://www.google.com/calendar/event?eid=YmUzODM1NjFlMjZiXzIwMjYxMTIxIGFkZHJlc3Nib29rI2NvbnRhY3RzQGdyb3VwLnYuY2FsZW5kYXIuZ29vZ2xlLmNvbQ",
+   "iCalUID": "be383561e26b@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000001",
+     "googleID": "addressbook#contacts@group.v.calendar.google.com"
+    },
+    "googleID": "be383561e26b_20261121"
+   },
+   "isFree": true,
+   "isRecurring": true,
+   "kind": "birthday",
+   "originalStart": "2026-11-21T00:00:00+00:00",
+   "time": {
+    "allDay": {
+     "endExclusive": "2026-11-22",
+     "start": "2026-11-21"
+    }
+   },
+   "title": "Lena's birthday"
+  },
+  {
+   "attendeeCount": 7,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=c3RhbmR1cDRrMnFfMjAyNjEwMjZUMDgzMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "standup4k2q@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "standup4k2q_20261026T083000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/hvv-lzlt-aej",
+   "originalStart": "2026-10-26T09:30:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-10-26T09:45:00+01:00",
+     "start": "2026-10-26T09:30:00+01:00"
+    }
+   },
+   "title": "Standup"
+  },
+  {
+   "attendeeCount": 2,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=b25lb25lcHJpeWFfMjAyNjEwMjZUMTIwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "oneonepriya@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "oneonepriya_20261026T120000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/dsf-ewyl-kli",
+   "originalStart": "2026-10-26T13:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-10-26T13:30:00+01:00",
+     "start": "2026-10-26T13:00:00+01:00"
+    }
+   },
+   "title": "1:1 with Priya"
+  },
+  {
+   "attendeeCount": 6,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=dGVhbXJldHJvNWJfMjAyNjEwMjdUMTIwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "teamretro5b@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "teamretro5b_20261027T120000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/atn-fqwa-qcq",
+   "originalStart": "2026-10-27T13:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-10-27T14:00:00+01:00",
+     "start": "2026-10-27T13:00:00+01:00"
+    }
+   },
+   "title": "Team retro"
+  },
+  {
+   "attendeeCount": 3,
+   "attendeeDomains": [
+    "acme.com",
+    "northwind.example"
+   ],
+   "colorKey": "orange",
+   "htmlLink": "https://www.google.com/calendar/event?eid=b2ZmaWNlaHJzOGNfMjAyNjEwMjdUMTUwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "officehrs8c@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "officehrs8c_20261027T150000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/wyo-ecdo-juv",
+   "originalStart": "2026-10-27T16:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-10-27T17:00:00+01:00",
+     "start": "2026-10-27T16:00:00+01:00"
+    }
+   },
+   "title": "Customer office hours"
+  },
+  {
+   "attendeeCount": 4,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=aGlyaW5nc3luYzFfMjAyNjEwMjdUMTYwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "hiringsync1@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "hiringsync1_20261027T160000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/hij-syuq-dap",
+   "originalStart": "2026-10-27T17:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-10-27T18:00:00+01:00",
+     "start": "2026-10-27T17:00:00+01:00"
+    }
+   },
+   "title": "Hiring sync"
+  },
+  {
+   "attendeeCount": 7,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=c3RhbmR1cDRrMnFfMjAyNjEwMjhUMDgzMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "standup4k2q@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "standup4k2q_20261028T083000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/hvv-lzlt-aej",
+   "originalStart": "2026-10-28T09:30:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-10-28T09:45:00+01:00",
+     "start": "2026-10-28T09:30:00+01:00"
+    }
+   },
+   "title": "Standup"
+  },
+  {
+   "attendeeCount": 5,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=ZGVzaWducmV2N21fMjAyNjEwMjhUMTAwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "designrev7m@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "designrev7m_20261028T100000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/npn-rngo-sws",
+   "originalStart": "2026-10-28T11:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-10-28T12:00:00+01:00",
+     "start": "2026-10-28T11:00:00+01:00"
+    }
+   },
+   "title": "Design review"
+  },
+  {
+   "attendeeCount": 4,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=YWNtZXN5bmMzcDlfMjAyNjEwMjhUMTMzMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "acmesync3p9@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "acmesync3p9_20261028T133000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/hos-omkj-goh",
+   "originalStart": "2026-10-28T14:30:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-10-28T15:00:00+01:00",
+     "start": "2026-10-28T14:30:00+01:00"
+    }
+   },
+   "title": "Acme sync"
+  },
+  {
+   "attendeeCount": 6,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "description": "Agenda in the planning doc.",
+   "htmlLink": "https://www.google.com/calendar/event?eid=d2Vla2x5cGxhbjJfMjAyNjEwMjhUMTUwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "weeklyplan2@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "weeklyplan2_20261028T150000Z"
+   },
+   "isOrganizer": true,
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/uuw-xumz-dqy",
+   "originalStart": "2026-10-28T16:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-10-28T17:00:00+01:00",
+     "start": "2026-10-28T16:00:00+01:00"
+    }
+   },
+   "title": "Weekly planning"
+  },
+  {
+   "attendeeCount": 7,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=c3RhbmR1cDRrMnFfMjAyNjEwMjlUMDgzMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "standup4k2q@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "standup4k2q_20261029T083000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/hvv-lzlt-aej",
+   "originalStart": "2026-10-29T09:30:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-10-29T09:45:00+01:00",
+     "start": "2026-10-29T09:30:00+01:00"
+    }
+   },
+   "title": "Standup"
+  },
+  {
+   "attendeeCount": 5,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=ZGVzaWducmV2N21fMjAyNjEwMjlUMTAwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "designrev7m@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "designrev7m_20261029T100000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/npn-rngo-sws",
+   "originalStart": "2026-10-29T11:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-10-29T12:00:00+01:00",
+     "start": "2026-10-29T11:00:00+01:00"
+    }
+   },
+   "title": "Design review"
+  },
+  {
+   "attendeeCount": 8,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=cm9hZG1hcHJ2NmRfMjAyNjEwMzBUMDkwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "roadmaprv6d@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "roadmaprv6d_20261030T090000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/rsq-uynk-nas",
+   "originalStart": "2026-10-30T10:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-10-30T11:00:00+01:00",
+     "start": "2026-10-30T10:00:00+01:00"
+    }
+   },
+   "title": "Roadmap review"
+  },
+  {
+   "attendeeCount": 3,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=aGFuZG92ZXIyZnhfMjAyNjEwMzBUMTEwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "handover2fx@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "handover2fx_20261030T110000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/vty-vtxk-bbb",
+   "originalStart": "2026-10-30T12:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-10-30T12:30:00+01:00",
+     "start": "2026-10-30T12:00:00+01:00"
+    }
+   },
+   "title": "Support handover"
+  },
+  {
+   "attendeeCount": 5,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=Y3JpdGlxdWU5cWFfMjAyNjEwMzBUMTIzMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "critique9qa@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "critique9qa_20261030T123000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/qct-xggl-afj",
+   "originalStart": "2026-10-30T13:30:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-10-30T14:00:00+01:00",
+     "start": "2026-10-30T13:30:00+01:00"
+    }
+   },
+   "title": "Design critique"
+  },
+  {
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=b29vZnJpZGF5MGtfMjAyNjEwMzBUMTUzMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "ooofriday0k@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "ooofriday0k_20261030T153000Z"
+   },
+   "isOrganizer": true,
+   "isRecurring": true,
+   "kind": "outOfOffice",
+   "originalStart": "2026-10-30T16:30:00+01:00",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-10-30T23:00:00+01:00",
+     "start": "2026-10-30T16:30:00+01:00"
+    }
+   },
+   "title": "Out of office"
+  },
+  {
+   "attendeeCount": 7,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=c3RhbmR1cDRrMnFfMjAyNjExMDJUMDgzMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "standup4k2q@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "standup4k2q_20261102T083000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/hvv-lzlt-aej",
+   "originalStart": "2026-11-02T09:30:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-02T09:45:00+01:00",
+     "start": "2026-11-02T09:30:00+01:00"
+    }
+   },
+   "title": "Standup"
+  },
+  {
+   "attendeeCount": 2,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=b25lb25lcHJpeWFfMjAyNjExMDJUMTIwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "oneonepriya@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "oneonepriya_20261102T120000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/dsf-ewyl-kli",
+   "originalStart": "2026-11-02T13:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-02T13:30:00+01:00",
+     "start": "2026-11-02T13:00:00+01:00"
+    }
+   },
+   "title": "1:1 with Priya"
+  },
+  {
+   "attendeeCount": 6,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=dGVhbXJldHJvNWJfMjAyNjExMDNUMTIwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "teamretro5b@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "teamretro5b_20261103T120000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/atn-fqwa-qcq",
+   "originalStart": "2026-11-03T13:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-03T14:00:00+01:00",
+     "start": "2026-11-03T13:00:00+01:00"
+    }
+   },
+   "title": "Team retro"
+  },
+  {
+   "attendeeCount": 3,
+   "attendeeDomains": [
+    "acme.com",
+    "northwind.example"
+   ],
+   "colorKey": "orange",
+   "htmlLink": "https://www.google.com/calendar/event?eid=b2ZmaWNlaHJzOGNfMjAyNjExMDNUMTUwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "officehrs8c@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "officehrs8c_20261103T150000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/wyo-ecdo-juv",
+   "originalStart": "2026-11-03T16:00:00+01:00",
+   "response": "tentative",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-03T17:00:00+01:00",
+     "start": "2026-11-03T16:00:00+01:00"
+    }
+   },
+   "title": "Customer office hours"
+  },
+  {
+   "attendeeCount": 4,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=aGlyaW5nc3luYzFfMjAyNjExMDNUMTYwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "hiringsync1@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "hiringsync1_20261103T160000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/hij-syuq-dap",
+   "originalStart": "2026-11-03T17:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-03T18:00:00+01:00",
+     "start": "2026-11-03T17:00:00+01:00"
+    }
+   },
+   "title": "Hiring sync"
+  },
+  {
+   "attendeeCount": 7,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=c3RhbmR1cDRrMnFfMjAyNjExMDRUMDgzMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "standup4k2q@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "standup4k2q_20261104T083000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/hvv-lzlt-aej",
+   "originalStart": "2026-11-04T09:30:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-04T09:45:00+01:00",
+     "start": "2026-11-04T09:30:00+01:00"
+    }
+   },
+   "title": "Standup"
+  },
+  {
+   "attendeeCount": 5,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=ZGVzaWducmV2N21fMjAyNjExMDRUMTAwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "designrev7m@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "designrev7m_20261104T100000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/npn-rngo-sws",
+   "originalStart": "2026-11-04T11:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-04T12:00:00+01:00",
+     "start": "2026-11-04T11:00:00+01:00"
+    }
+   },
+   "title": "Design review"
+  },
+  {
+   "attendeeCount": 4,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=YWNtZXN5bmMzcDlfMjAyNjExMDRUMTMzMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "acmesync3p9@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "acmesync3p9_20261104T133000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/hos-omkj-goh",
+   "originalStart": "2026-11-04T14:30:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-04T15:00:00+01:00",
+     "start": "2026-11-04T14:30:00+01:00"
+    }
+   },
+   "title": "Acme sync"
+  },
+  {
+   "attendeeCount": 6,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "description": "Agenda in the planning doc.",
+   "htmlLink": "https://www.google.com/calendar/event?eid=d2Vla2x5cGxhbjJfMjAyNjExMDRUMTUwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "weeklyplan2@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "weeklyplan2_20261104T150000Z"
+   },
+   "isOrganizer": true,
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/uuw-xumz-dqy",
+   "originalStart": "2026-11-04T16:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-04T17:00:00+01:00",
+     "start": "2026-11-04T16:00:00+01:00"
+    }
+   },
+   "title": "Weekly planning"
+  },
+  {
+   "attendeeCount": 7,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=c3RhbmR1cDRrMnFfMjAyNjExMDVUMDgzMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "standup4k2q@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "standup4k2q_20261105T083000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/hvv-lzlt-aej",
+   "originalStart": "2026-11-05T09:30:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-05T09:45:00+01:00",
+     "start": "2026-11-05T09:30:00+01:00"
+    }
+   },
+   "title": "Standup"
+  },
+  {
+   "attendeeCount": 5,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=ZGVzaWducmV2N21fMjAyNjExMDVUMTAwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "designrev7m@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "designrev7m_20261105T100000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/npn-rngo-sws",
+   "originalStart": "2026-11-05T11:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-05T12:00:00+01:00",
+     "start": "2026-11-05T11:00:00+01:00"
+    }
+   },
+   "title": "Design review"
+  },
+  {
+   "attendeeCount": 8,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=cm9hZG1hcHJ2NmRfMjAyNjExMDZUMDkwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "roadmaprv6d@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "roadmaprv6d_20261106T090000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/rsq-uynk-nas",
+   "originalStart": "2026-11-06T10:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-06T11:00:00+01:00",
+     "start": "2026-11-06T10:00:00+01:00"
+    }
+   },
+   "title": "Roadmap review"
+  },
+  {
+   "attendeeCount": 3,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=aGFuZG92ZXIyZnhfMjAyNjExMDZUMTEwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "handover2fx@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "handover2fx_20261106T110000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/vty-vtxk-bbb",
+   "originalStart": "2026-11-06T12:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-06T12:30:00+01:00",
+     "start": "2026-11-06T12:00:00+01:00"
+    }
+   },
+   "title": "Support handover"
+  },
+  {
+   "attendeeCount": 5,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=Y3JpdGlxdWU5cWFfMjAyNjExMDZUMTIzMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "critique9qa@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "critique9qa_20261106T123000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/qct-xggl-afj",
+   "originalStart": "2026-11-06T13:30:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-06T14:00:00+01:00",
+     "start": "2026-11-06T13:30:00+01:00"
+    }
+   },
+   "title": "Design critique"
+  },
+  {
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=b29vZnJpZGF5MGtfMjAyNjExMDZUMTUzMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "ooofriday0k@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "ooofriday0k_20261106T153000Z"
+   },
+   "isOrganizer": true,
+   "isRecurring": true,
+   "kind": "outOfOffice",
+   "originalStart": "2026-11-06T16:30:00+01:00",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-06T23:00:00+01:00",
+     "start": "2026-11-06T16:30:00+01:00"
+    }
+   },
+   "title": "Out of office"
+  },
+  {
+   "attendeeCount": 7,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=c3RhbmR1cDRrMnFfMjAyNjExMDlUMDgzMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "standup4k2q@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "standup4k2q_20261109T083000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/hvv-lzlt-aej",
+   "originalStart": "2026-11-09T09:30:00+01:00",
+   "response": "declined",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-09T09:45:00+01:00",
+     "start": "2026-11-09T09:30:00+01:00"
+    }
+   },
+   "title": "Standup"
+  },
+  {
+   "attendeeCount": 2,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=b25lb25lcHJpeWFfMjAyNjExMDlUMTIwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "oneonepriya@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "oneonepriya_20261109T120000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/dsf-ewyl-kli",
+   "originalStart": "2026-11-09T13:00:00+01:00",
+   "response": "declined",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-09T13:30:00+01:00",
+     "start": "2026-11-09T13:00:00+01:00"
+    }
+   },
+   "title": "1:1 with Priya"
+  },
+  {
+   "attendeeCount": 6,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=dGVhbXJldHJvNWJfMjAyNjExMTBUMTIwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "teamretro5b@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "teamretro5b_20261110T120000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/atn-fqwa-qcq",
+   "originalStart": "2026-11-10T13:00:00+01:00",
+   "response": "declined",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-10T14:00:00+01:00",
+     "start": "2026-11-10T13:00:00+01:00"
+    }
+   },
+   "title": "Team retro"
+  },
+  {
+   "attendeeCount": 3,
+   "attendeeDomains": [
+    "acme.com",
+    "northwind.example"
+   ],
+   "colorKey": "orange",
+   "htmlLink": "https://www.google.com/calendar/event?eid=b2ZmaWNlaHJzOGNfMjAyNjExMTBUMTUwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "officehrs8c@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "officehrs8c_20261110T150000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/wyo-ecdo-juv",
+   "originalStart": "2026-11-10T16:00:00+01:00",
+   "response": "declined",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-10T17:00:00+01:00",
+     "start": "2026-11-10T16:00:00+01:00"
+    }
+   },
+   "title": "Customer office hours"
+  },
+  {
+   "attendeeCount": 4,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=aGlyaW5nc3luYzFfMjAyNjExMTBUMTYwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "hiringsync1@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "hiringsync1_20261110T160000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/hij-syuq-dap",
+   "originalStart": "2026-11-10T17:00:00+01:00",
+   "response": "declined",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-10T18:00:00+01:00",
+     "start": "2026-11-10T17:00:00+01:00"
+    }
+   },
+   "title": "Hiring sync"
+  },
+  {
+   "attendeeCount": 7,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=c3RhbmR1cDRrMnFfMjAyNjExMTFUMDgzMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "standup4k2q@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "standup4k2q_20261111T083000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/hvv-lzlt-aej",
+   "originalStart": "2026-11-11T09:30:00+01:00",
+   "response": "declined",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-11T09:45:00+01:00",
+     "start": "2026-11-11T09:30:00+01:00"
+    }
+   },
+   "title": "Standup"
+  },
+  {
+   "attendeeCount": 5,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=ZGVzaWducmV2N21fMjAyNjExMTFUMTAwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "designrev7m@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "designrev7m_20261111T100000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/npn-rngo-sws",
+   "originalStart": "2026-11-11T11:00:00+01:00",
+   "response": "declined",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-11T12:00:00+01:00",
+     "start": "2026-11-11T11:00:00+01:00"
+    }
+   },
+   "title": "Design review"
+  },
+  {
+   "attendeeCount": 4,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=YWNtZXN5bmMzcDlfMjAyNjExMTFUMTMzMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "acmesync3p9@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "acmesync3p9_20261111T133000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/hos-omkj-goh",
+   "originalStart": "2026-11-11T14:30:00+01:00",
+   "response": "declined",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-11T15:00:00+01:00",
+     "start": "2026-11-11T14:30:00+01:00"
+    }
+   },
+   "title": "Acme sync"
+  },
+  {
+   "attendeeCount": 6,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "description": "Agenda in the planning doc.",
+   "htmlLink": "https://www.google.com/calendar/event?eid=d2Vla2x5cGxhbjJfMjAyNjExMTFUMTUwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "weeklyplan2@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "weeklyplan2_20261111T150000Z"
+   },
+   "isOrganizer": true,
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/uuw-xumz-dqy",
+   "originalStart": "2026-11-11T16:00:00+01:00",
+   "response": "declined",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-11T17:00:00+01:00",
+     "start": "2026-11-11T16:00:00+01:00"
+    }
+   },
+   "title": "Weekly planning"
+  },
+  {
+   "attendeeCount": 7,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=c3RhbmR1cDRrMnFfMjAyNjExMTJUMDgzMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "standup4k2q@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "standup4k2q_20261112T083000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/hvv-lzlt-aej",
+   "originalStart": "2026-11-12T09:30:00+01:00",
+   "response": "declined",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-12T09:45:00+01:00",
+     "start": "2026-11-12T09:30:00+01:00"
+    }
+   },
+   "title": "Standup"
+  },
+  {
+   "attendeeCount": 5,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=ZGVzaWducmV2N21fMjAyNjExMTJUMTAwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "designrev7m@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "designrev7m_20261112T100000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/npn-rngo-sws",
+   "originalStart": "2026-11-12T11:00:00+01:00",
+   "response": "declined",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-12T12:00:00+01:00",
+     "start": "2026-11-12T11:00:00+01:00"
+    }
+   },
+   "title": "Design review"
+  },
+  {
+   "attendeeCount": 8,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=cm9hZG1hcHJ2NmRfMjAyNjExMTNUMDkwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "roadmaprv6d@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "roadmaprv6d_20261113T090000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/rsq-uynk-nas",
+   "originalStart": "2026-11-13T10:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-13T11:00:00+01:00",
+     "start": "2026-11-13T10:00:00+01:00"
+    }
+   },
+   "title": "Roadmap review"
+  },
+  {
+   "attendeeCount": 3,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=aGFuZG92ZXIyZnhfMjAyNjExMTNUMTEwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "handover2fx@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "handover2fx_20261113T110000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/vty-vtxk-bbb",
+   "originalStart": "2026-11-13T12:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-13T12:30:00+01:00",
+     "start": "2026-11-13T12:00:00+01:00"
+    }
+   },
+   "title": "Support handover"
+  },
+  {
+   "attendeeCount": 5,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=Y3JpdGlxdWU5cWFfMjAyNjExMTNUMTIzMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "critique9qa@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "critique9qa_20261113T123000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/qct-xggl-afj",
+   "originalStart": "2026-11-13T13:30:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-13T14:00:00+01:00",
+     "start": "2026-11-13T13:30:00+01:00"
+    }
+   },
+   "title": "Design critique"
+  },
+  {
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=b29vZnJpZGF5MGtfMjAyNjExMTNUMTUzMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "ooofriday0k@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "ooofriday0k_20261113T153000Z"
+   },
+   "isOrganizer": true,
+   "isRecurring": true,
+   "kind": "outOfOffice",
+   "originalStart": "2026-11-13T16:30:00+01:00",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-13T23:00:00+01:00",
+     "start": "2026-11-13T16:30:00+01:00"
+    }
+   },
+   "title": "Out of office"
+  },
+  {
+   "attendeeCount": 7,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=c3RhbmR1cDRrMnFfMjAyNjExMTZUMDgzMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "standup4k2q@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "standup4k2q_20261116T083000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/hvv-lzlt-aej",
+   "originalStart": "2026-11-16T09:30:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-16T09:45:00+01:00",
+     "start": "2026-11-16T09:30:00+01:00"
+    }
+   },
+   "title": "Standup"
+  },
+  {
+   "attendeeCount": 2,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=b25lb25lcHJpeWFfMjAyNjExMTZUMTIwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "oneonepriya@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "oneonepriya_20261116T120000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/dsf-ewyl-kli",
+   "originalStart": "2026-11-16T13:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-16T13:30:00+01:00",
+     "start": "2026-11-16T13:00:00+01:00"
+    }
+   },
+   "title": "1:1 with Priya"
+  },
+  {
+   "attendeeCount": 6,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=dGVhbXJldHJvNWJfMjAyNjExMTdUMTIwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "teamretro5b@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "teamretro5b_20261117T120000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/atn-fqwa-qcq",
+   "originalStart": "2026-11-17T13:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-17T14:00:00+01:00",
+     "start": "2026-11-17T13:00:00+01:00"
+    }
+   },
+   "title": "Team retro"
+  },
+  {
+   "attendeeCount": 3,
+   "attendeeDomains": [
+    "acme.com",
+    "northwind.example"
+   ],
+   "colorKey": "orange",
+   "htmlLink": "https://www.google.com/calendar/event?eid=b2ZmaWNlaHJzOGNfMjAyNjExMTdUMTUwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "officehrs8c@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "officehrs8c_20261117T150000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/wyo-ecdo-juv",
+   "originalStart": "2026-11-17T16:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-17T17:00:00+01:00",
+     "start": "2026-11-17T16:00:00+01:00"
+    }
+   },
+   "title": "Customer office hours"
+  },
+  {
+   "attendeeCount": 4,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=aGlyaW5nc3luYzFfMjAyNjExMTdUMTYwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "hiringsync1@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "hiringsync1_20261117T160000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/hij-syuq-dap",
+   "originalStart": "2026-11-17T17:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-17T18:00:00+01:00",
+     "start": "2026-11-17T17:00:00+01:00"
+    }
+   },
+   "title": "Hiring sync"
+  },
+  {
+   "attendeeCount": 7,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=c3RhbmR1cDRrMnFfMjAyNjExMThUMDgzMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "standup4k2q@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "standup4k2q_20261118T083000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/hvv-lzlt-aej",
+   "originalStart": "2026-11-18T09:30:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-18T09:45:00+01:00",
+     "start": "2026-11-18T09:30:00+01:00"
+    }
+   },
+   "title": "Standup"
+  },
+  {
+   "attendeeCount": 5,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=ZGVzaWducmV2N21fMjAyNjExMThUMTAwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "designrev7m@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "designrev7m_20261118T100000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/npn-rngo-sws",
+   "originalStart": "2026-11-18T11:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-18T12:00:00+01:00",
+     "start": "2026-11-18T11:00:00+01:00"
+    }
+   },
+   "title": "Design review"
+  },
+  {
+   "attendeeCount": 4,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=YWNtZXN5bmMzcDlfMjAyNjExMThUMTMzMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "acmesync3p9@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "acmesync3p9_20261118T133000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/hos-omkj-goh",
+   "originalStart": "2026-11-18T14:30:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-18T15:00:00+01:00",
+     "start": "2026-11-18T14:30:00+01:00"
+    }
+   },
+   "title": "Acme sync"
+  },
+  {
+   "attendeeCount": 6,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "description": "Agenda in the planning doc.",
+   "htmlLink": "https://www.google.com/calendar/event?eid=d2Vla2x5cGxhbjJfMjAyNjExMThUMTUwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "weeklyplan2@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "weeklyplan2_20261118T150000Z"
+   },
+   "isOrganizer": true,
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/uuw-xumz-dqy",
+   "originalStart": "2026-11-18T16:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-18T17:00:00+01:00",
+     "start": "2026-11-18T16:00:00+01:00"
+    }
+   },
+   "title": "Weekly planning"
+  },
+  {
+   "attendeeCount": 7,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=c3RhbmR1cDRrMnFfMjAyNjExMTlUMDgzMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "standup4k2q@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "standup4k2q_20261119T083000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/hvv-lzlt-aej",
+   "originalStart": "2026-11-19T09:30:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-19T09:45:00+01:00",
+     "start": "2026-11-19T09:30:00+01:00"
+    }
+   },
+   "title": "Standup"
+  },
+  {
+   "attendeeCount": 5,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=ZGVzaWducmV2N21fMjAyNjExMTlUMTAwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "designrev7m@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "designrev7m_20261119T100000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/npn-rngo-sws",
+   "originalStart": "2026-11-19T11:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-19T12:00:00+01:00",
+     "start": "2026-11-19T11:00:00+01:00"
+    }
+   },
+   "title": "Design review"
+  },
+  {
+   "attendeeCount": 8,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=cm9hZG1hcHJ2NmRfMjAyNjExMjBUMDkwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "roadmaprv6d@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "roadmaprv6d_20261120T090000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/rsq-uynk-nas",
+   "originalStart": "2026-11-20T10:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-20T11:00:00+01:00",
+     "start": "2026-11-20T10:00:00+01:00"
+    }
+   },
+   "title": "Roadmap review"
+  },
+  {
+   "attendeeCount": 3,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=aGFuZG92ZXIyZnhfMjAyNjExMjBUMTEwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "handover2fx@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "handover2fx_20261120T110000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/vty-vtxk-bbb",
+   "originalStart": "2026-11-20T12:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-20T12:30:00+01:00",
+     "start": "2026-11-20T12:00:00+01:00"
+    }
+   },
+   "title": "Support handover"
+  },
+  {
+   "attendeeCount": 5,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=Y3JpdGlxdWU5cWFfMjAyNjExMjBUMTIzMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "critique9qa@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "critique9qa_20261120T123000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/qct-xggl-afj",
+   "originalStart": "2026-11-20T13:30:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-20T14:00:00+01:00",
+     "start": "2026-11-20T13:30:00+01:00"
+    }
+   },
+   "title": "Design critique"
+  },
+  {
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=b29vZnJpZGF5MGtfMjAyNjExMjBUMTUzMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "ooofriday0k@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "ooofriday0k_20261120T153000Z"
+   },
+   "isOrganizer": true,
+   "isRecurring": true,
+   "kind": "outOfOffice",
+   "originalStart": "2026-11-20T16:30:00+01:00",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-20T23:00:00+01:00",
+     "start": "2026-11-20T16:30:00+01:00"
+    }
+   },
+   "title": "Out of office"
+  },
+  {
+   "attendeeCount": 7,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=c3RhbmR1cDRrMnFfMjAyNjExMjNUMDgzMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "standup4k2q@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "standup4k2q_20261123T083000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/hvv-lzlt-aej",
+   "originalStart": "2026-11-23T09:30:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-23T09:45:00+01:00",
+     "start": "2026-11-23T09:30:00+01:00"
+    }
+   },
+   "title": "Standup"
+  },
+  {
+   "attendeeCount": 2,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=b25lb25lcHJpeWFfMjAyNjExMjNUMTIwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "oneonepriya@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "oneonepriya_20261123T120000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/dsf-ewyl-kli",
+   "originalStart": "2026-11-23T13:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-23T13:30:00+01:00",
+     "start": "2026-11-23T13:00:00+01:00"
+    }
+   },
+   "title": "1:1 with Priya"
+  },
+  {
+   "attendeeCount": 6,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=dGVhbXJldHJvNWJfMjAyNjExMjRUMTIwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "teamretro5b@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "teamretro5b_20261124T120000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/atn-fqwa-qcq",
+   "originalStart": "2026-11-24T13:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-24T14:00:00+01:00",
+     "start": "2026-11-24T13:00:00+01:00"
+    }
+   },
+   "title": "Team retro"
+  },
+  {
+   "attendeeCount": 3,
+   "attendeeDomains": [
+    "acme.com",
+    "northwind.example"
+   ],
+   "colorKey": "orange",
+   "htmlLink": "https://www.google.com/calendar/event?eid=b2ZmaWNlaHJzOGNfMjAyNjExMjRUMTUwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "officehrs8c@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "officehrs8c_20261124T150000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/wyo-ecdo-juv",
+   "originalStart": "2026-11-24T16:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-24T17:00:00+01:00",
+     "start": "2026-11-24T16:00:00+01:00"
+    }
+   },
+   "title": "Customer office hours"
+  },
+  {
+   "attendeeCount": 4,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=aGlyaW5nc3luYzFfMjAyNjExMjRUMTYwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "hiringsync1@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "hiringsync1_20261124T160000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/hij-syuq-dap",
+   "originalStart": "2026-11-24T17:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-24T18:00:00+01:00",
+     "start": "2026-11-24T17:00:00+01:00"
+    }
+   },
+   "title": "Hiring sync"
+  },
+  {
+   "attendeeCount": 7,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=c3RhbmR1cDRrMnFfMjAyNjExMjVUMDgzMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "standup4k2q@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "standup4k2q_20261125T083000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/hvv-lzlt-aej",
+   "originalStart": "2026-11-25T09:30:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-25T09:45:00+01:00",
+     "start": "2026-11-25T09:30:00+01:00"
+    }
+   },
+   "title": "Standup"
+  },
+  {
+   "attendeeCount": 5,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=ZGVzaWducmV2N21fMjAyNjExMjVUMTAwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "designrev7m@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "designrev7m_20261125T100000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/npn-rngo-sws",
+   "originalStart": "2026-11-25T11:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-25T12:00:00+01:00",
+     "start": "2026-11-25T11:00:00+01:00"
+    }
+   },
+   "title": "Design review"
+  },
+  {
+   "attendeeCount": 4,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=YWNtZXN5bmMzcDlfMjAyNjExMjVUMTMzMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "acmesync3p9@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "acmesync3p9_20261125T133000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/hos-omkj-goh",
+   "originalStart": "2026-11-25T14:30:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-25T15:00:00+01:00",
+     "start": "2026-11-25T14:30:00+01:00"
+    }
+   },
+   "title": "Acme sync"
+  },
+  {
+   "attendeeCount": 6,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "description": "Agenda in the planning doc.",
+   "htmlLink": "https://www.google.com/calendar/event?eid=d2Vla2x5cGxhbjJfMjAyNjExMjVUMTUwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "weeklyplan2@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "weeklyplan2_20261125T150000Z"
+   },
+   "isOrganizer": true,
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/uuw-xumz-dqy",
+   "originalStart": "2026-11-25T16:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-25T17:00:00+01:00",
+     "start": "2026-11-25T16:00:00+01:00"
+    }
+   },
+   "title": "Weekly planning"
+  },
+  {
+   "attendeeCount": 7,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=c3RhbmR1cDRrMnFfMjAyNjExMjZUMDgzMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "standup4k2q@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "standup4k2q_20261126T083000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/hvv-lzlt-aej",
+   "originalStart": "2026-11-26T09:30:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-26T09:45:00+01:00",
+     "start": "2026-11-26T09:30:00+01:00"
+    }
+   },
+   "title": "Standup"
+  },
+  {
+   "attendeeCount": 5,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=ZGVzaWducmV2N21fMjAyNjExMjZUMTAwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "designrev7m@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "designrev7m_20261126T100000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/npn-rngo-sws",
+   "originalStart": "2026-11-26T11:00:00+01:00",
+   "response": "accepted",
+   "status": "cancelled",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-26T12:00:00+01:00",
+     "start": "2026-11-26T11:00:00+01:00"
+    }
+   },
+   "title": "Design review"
+  },
+  {
+   "attendeeCount": 8,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=cm9hZG1hcHJ2NmRfMjAyNjExMjdUMDkwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "roadmaprv6d@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "roadmaprv6d_20261127T090000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/rsq-uynk-nas",
+   "originalStart": "2026-11-27T10:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-27T11:00:00+01:00",
+     "start": "2026-11-27T10:00:00+01:00"
+    }
+   },
+   "title": "Roadmap review"
+  },
+  {
+   "attendeeCount": 3,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=aGFuZG92ZXIyZnhfMjAyNjExMjdUMTEwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "handover2fx@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "handover2fx_20261127T110000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/vty-vtxk-bbb",
+   "originalStart": "2026-11-27T12:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-27T12:30:00+01:00",
+     "start": "2026-11-27T12:00:00+01:00"
+    }
+   },
+   "title": "Support handover"
+  },
+  {
+   "attendeeCount": 5,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=Y3JpdGlxdWU5cWFfMjAyNjExMjdUMTIzMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "critique9qa@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "critique9qa_20261127T123000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/qct-xggl-afj",
+   "originalStart": "2026-11-27T13:30:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-27T14:00:00+01:00",
+     "start": "2026-11-27T13:30:00+01:00"
+    }
+   },
+   "title": "Design critique"
+  },
+  {
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=b29vZnJpZGF5MGtfMjAyNjExMjdUMTUzMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "ooofriday0k@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "ooofriday0k_20261127T153000Z"
+   },
+   "isOrganizer": true,
+   "isRecurring": true,
+   "kind": "outOfOffice",
+   "originalStart": "2026-11-27T16:30:00+01:00",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-27T23:00:00+01:00",
+     "start": "2026-11-27T16:30:00+01:00"
+    }
+   },
+   "title": "Out of office"
+  },
+  {
+   "attendeeCount": 7,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=c3RhbmR1cDRrMnFfMjAyNjExMzBUMDgzMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "standup4k2q@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "standup4k2q_20261130T083000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/hvv-lzlt-aej",
+   "originalStart": "2026-11-30T09:30:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-30T09:45:00+01:00",
+     "start": "2026-11-30T09:30:00+01:00"
+    }
+   },
+   "title": "Standup"
+  },
+  {
+   "attendeeCount": 2,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=b25lb25lcHJpeWFfMjAyNjExMzBUMTIwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "oneonepriya@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "oneonepriya_20261130T120000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/dsf-ewyl-kli",
+   "originalStart": "2026-11-30T13:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-30T13:30:00+01:00",
+     "start": "2026-11-30T13:00:00+01:00"
+    }
+   },
+   "title": "1:1 with Priya"
+  },
+  {
+   "attendeeCount": 6,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=dGVhbXJldHJvNWJfMjAyNjEyMDFUMTIwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "teamretro5b@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "teamretro5b_20261201T120000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/atn-fqwa-qcq",
+   "originalStart": "2026-12-01T13:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-12-01T14:00:00+01:00",
+     "start": "2026-12-01T13:00:00+01:00"
+    }
+   },
+   "title": "Team retro"
+  },
+  {
+   "attendeeCount": 3,
+   "attendeeDomains": [
+    "acme.com",
+    "northwind.example"
+   ],
+   "colorKey": "orange",
+   "htmlLink": "https://www.google.com/calendar/event?eid=b2ZmaWNlaHJzOGNfMjAyNjEyMDFUMTUwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "officehrs8c@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "officehrs8c_20261201T150000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/wyo-ecdo-juv",
+   "originalStart": "2026-12-01T16:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-12-01T17:00:00+01:00",
+     "start": "2026-12-01T16:00:00+01:00"
+    }
+   },
+   "title": "Customer office hours"
+  },
+  {
+   "attendeeCount": 4,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=aGlyaW5nc3luYzFfMjAyNjEyMDFUMTYwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "hiringsync1@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "hiringsync1_20261201T160000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/hij-syuq-dap",
+   "originalStart": "2026-12-01T17:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-12-01T18:00:00+01:00",
+     "start": "2026-12-01T17:00:00+01:00"
+    }
+   },
+   "title": "Hiring sync"
+  },
+  {
+   "attendeeCount": 7,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=c3RhbmR1cDRrMnFfMjAyNjEyMDJUMDgzMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "standup4k2q@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "standup4k2q_20261202T083000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/hvv-lzlt-aej",
+   "originalStart": "2026-12-02T09:30:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-12-02T09:45:00+01:00",
+     "start": "2026-12-02T09:30:00+01:00"
+    }
+   },
+   "title": "Standup"
+  },
+  {
+   "attendeeCount": 5,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=ZGVzaWducmV2N21fMjAyNjEyMDJUMTAwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "designrev7m@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "designrev7m_20261202T100000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/npn-rngo-sws",
+   "originalStart": "2026-12-02T11:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-12-02T12:00:00+01:00",
+     "start": "2026-12-02T11:00:00+01:00"
+    }
+   },
+   "title": "Design review"
+  },
+  {
+   "attendeeCount": 4,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=YWNtZXN5bmMzcDlfMjAyNjEyMDJUMTMzMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "acmesync3p9@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "acmesync3p9_20261202T133000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/hos-omkj-goh",
+   "originalStart": "2026-12-02T14:30:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-12-02T15:00:00+01:00",
+     "start": "2026-12-02T14:30:00+01:00"
+    }
+   },
+   "title": "Acme sync"
+  },
+  {
+   "attendeeCount": 6,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "description": "Agenda in the planning doc.",
+   "htmlLink": "https://www.google.com/calendar/event?eid=d2Vla2x5cGxhbjJfMjAyNjEyMDJUMTUwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "weeklyplan2@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "weeklyplan2_20261202T150000Z"
+   },
+   "isOrganizer": true,
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/uuw-xumz-dqy",
+   "originalStart": "2026-12-02T16:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-12-02T17:00:00+01:00",
+     "start": "2026-12-02T16:00:00+01:00"
+    }
+   },
+   "title": "Weekly planning"
+  },
+  {
+   "attendeeCount": 7,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=c3RhbmR1cDRrMnFfMjAyNjEyMDNUMDgzMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "standup4k2q@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "standup4k2q_20261203T083000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/hvv-lzlt-aej",
+   "originalStart": "2026-12-03T09:30:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-12-03T09:45:00+01:00",
+     "start": "2026-12-03T09:30:00+01:00"
+    }
+   },
+   "title": "Standup"
+  },
+  {
+   "attendeeCount": 5,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=ZGVzaWducmV2N21fMjAyNjEyMDNUMTAwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "designrev7m@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "designrev7m_20261203T100000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/npn-rngo-sws",
+   "originalStart": "2026-12-03T11:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-12-03T12:00:00+01:00",
+     "start": "2026-12-03T11:00:00+01:00"
+    }
+   },
+   "title": "Design review"
+  },
+  {
+   "attendeeCount": 8,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=cm9hZG1hcHJ2NmRfMjAyNjEyMDRUMDkwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "roadmaprv6d@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "roadmaprv6d_20261204T090000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/rsq-uynk-nas",
+   "originalStart": "2026-12-04T10:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-12-04T11:00:00+01:00",
+     "start": "2026-12-04T10:00:00+01:00"
+    }
+   },
+   "title": "Roadmap review"
+  },
+  {
+   "attendeeCount": 3,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=aGFuZG92ZXIyZnhfMjAyNjEyMDRUMTEwMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "handover2fx@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "handover2fx_20261204T110000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/vty-vtxk-bbb",
+   "originalStart": "2026-12-04T12:00:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-12-04T12:30:00+01:00",
+     "start": "2026-12-04T12:00:00+01:00"
+    }
+   },
+   "title": "Support handover"
+  },
+  {
+   "attendeeCount": 5,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=Y3JpdGlxdWU5cWFfMjAyNjEyMDRUMTIzMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "critique9qa@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "critique9qa_20261204T123000Z"
+   },
+   "isRecurring": true,
+   "joinURL": "https://meet.google.com/qct-xggl-afj",
+   "originalStart": "2026-12-04T13:30:00+01:00",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-12-04T14:00:00+01:00",
+     "start": "2026-12-04T13:30:00+01:00"
+    }
+   },
+   "title": "Design critique"
+  },
+  {
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=b29vZnJpZGF5MGtfMjAyNjEyMDRUMTUzMDAwWiB5b3VAYWNtZS5jb20",
+   "iCalUID": "ooofriday0k@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "ooofriday0k_20261204T153000Z"
+   },
+   "isOrganizer": true,
+   "isRecurring": true,
+   "kind": "outOfOffice",
+   "originalStart": "2026-12-04T16:30:00+01:00",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-12-04T23:00:00+01:00",
+     "start": "2026-12-04T16:30:00+01:00"
+    }
+   },
+   "title": "Out of office"
+  },
+  {
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=YTY3YWFlYWJjM2I3M2IwZjUxODcgeW91QGFjbWUuY29t",
+   "iCalUID": "a67aaeabc3b73b0f5187@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "a67aaeabc3b73b0f5187"
+   },
+   "isFree": true,
+   "isOrganizer": true,
+   "kind": "workingLocation",
+   "time": {
+    "allDay": {
+     "endExclusive": "2026-11-03",
+     "start": "2026-11-02"
+    }
+   },
+   "title": "Office"
+  },
+  {
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=OTVlZGVmMDU3ZGNiYjkxYWMwNDkgeW91QGFjbWUuY29t",
+   "iCalUID": "95edef057dcbb91ac049@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "95edef057dcbb91ac049"
+   },
+   "isFree": true,
+   "isOrganizer": true,
+   "kind": "workingLocation",
+   "time": {
+    "allDay": {
+     "endExclusive": "2026-11-04",
+     "start": "2026-11-03"
+    }
+   },
+   "title": "Lisbon"
+  },
+  {
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=MGY3YWY0ODFhYTEwZmZmODY0NzkgeW91QGFjbWUuY29t",
+   "iCalUID": "0f7af481aa10fff86479@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "0f7af481aa10fff86479"
+   },
+   "isFree": true,
+   "isOrganizer": true,
+   "kind": "workingLocation",
+   "time": {
+    "allDay": {
+     "endExclusive": "2026-11-05",
+     "start": "2026-11-04"
+    }
+   },
+   "title": "Lisbon"
+  },
+  {
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=Y2Q2M2YyYTVlMGFmOTFiZTcwZWEgeW91QGFjbWUuY29t",
+   "iCalUID": "cd63f2a5e0af91be70ea@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "cd63f2a5e0af91be70ea"
+   },
+   "isFree": true,
+   "isOrganizer": true,
+   "kind": "workingLocation",
+   "time": {
+    "allDay": {
+     "endExclusive": "2026-11-06",
+     "start": "2026-11-05"
+    }
+   },
+   "title": "Lisbon"
+  },
+  {
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=NDZhODRjNGRjZmE4ZjI3NDQzMzggeW91QGFjbWUuY29t",
+   "iCalUID": "46a84c4dcfa8f2744338@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "46a84c4dcfa8f2744338"
+   },
+   "isFree": true,
+   "isOrganizer": true,
+   "kind": "workingLocation",
+   "time": {
+    "allDay": {
+     "endExclusive": "2026-11-07",
+     "start": "2026-11-06"
+    }
+   },
+   "title": "Home"
+  },
+  {
+   "attendeeCount": 4,
+   "attendeeDomains": [
+    "acme.com",
+    "vendorly.example"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=NjA2NDVhNzU3MGM4N2FmMTFjYmUgeW91QGFjbWUuY29t",
+   "iCalUID": "60645a7570c87af11cbe@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "60645a7570c87af11cbe"
+   },
+   "joinURL": "https://meet.google.com/oud-mfwx-vpw",
+   "response": "declined",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-04T10:30:00+01:00",
+     "start": "2026-11-04T10:00:00+01:00"
+    }
+   },
+   "title": "Vendor demo"
+  },
+  {
+   "attendeeCount": 5,
+   "attendeeDomains": [
+    "acme.com",
+    "harbor.example"
+   ],
+   "colorKey": "purple",
+   "description": "Q4 numbers and the seed extension.\nDeck: https://harbor.example/deck/q4",
+   "htmlLink": "https://www.google.com/calendar/event?eid=N2hxMms0aW52ZXN0b3IwNCB5b3VAYWNtZS5jb20",
+   "iCalUID": "7hq2k4investor04@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "7hq2k4investor04"
+   },
+   "joinURL": "https://meet.google.com/ick-auwh-blm",
+   "response": "needsAction",
+   "time": {
+    "timed": {
+     "authoredZone": "America/New_York",
+     "end": "2026-11-04T15:00:00+01:00",
+     "start": "2026-11-04T14:00:00+01:00"
+    }
+   },
+   "title": "Investor call"
+  },
+  {
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=N2IxMDE5ZGIxM2RkZjM2ZTczNWQgeW91QGFjbWUuY29t",
+   "iCalUID": "7b1019db13ddf36e735d@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "7b1019db13ddf36e735d"
+   },
+   "isOrganizer": true,
+   "kind": "focusTime",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-05T15:00:00+01:00",
+     "start": "2026-11-05T13:00:00+01:00"
+    }
+   },
+   "title": "Focus time"
+  },
+  {
+   "attendeeCount": 3,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=ZGU1MWMxOTNlMmI5MDMzYzIwMjggeW91QGFjbWUuY29t",
+   "iCalUID": "de51c193e2b9033c2028@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "de51c193e2b9033c2028"
+   },
+   "joinURL": "https://meet.google.com/tkv-lvef-xwu",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-05T15:45:00+01:00",
+     "start": "2026-11-05T15:30:00+01:00"
+    }
+   },
+   "title": "Quick sync on pricing"
+  },
+  {
+   "attendeeCount": 4,
+   "attendeeDomains": [
+    "acme.com",
+    "harbor.example"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=NDZmZDBiYTU4MzU3ZGRjMDA2ODkgeW91QGFjbWUuY29t",
+   "iCalUID": "46fd0ba58357ddc00689@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "46fd0ba58357ddc00689"
+   },
+   "joinURL": "https://meet.google.com/qmi-ouhk-btc",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-06T16:00:00+01:00",
+     "start": "2026-11-06T15:00:00+01:00"
+    }
+   },
+   "title": "Investor call"
+  },
+  {
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=MTFiYjIyYTc1MjY2ZTM5NGEwMWQgeW91QGFjbWUuY29t",
+   "iCalUID": "11bb22a75266e394a01d@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "11bb22a75266e394a01d"
+   },
+   "isOrganizer": true,
+   "kind": "outOfOffice",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-13T00:00:00+01:00",
+     "start": "2026-11-09T00:00:00+01:00"
+    }
+   },
+   "title": "Out of office"
+  },
+  {
+   "attendeeCount": 6,
+   "attendeeDomains": [
+    "acme.com",
+    "boardroom.example"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=YzNkNDYwNjIxMzM1NWM1ZTVhN2MgeW91QGFjbWUuY29t",
+   "iCalUID": "c3d4606213355c5e5a7c@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "c3d4606213355c5e5a7c"
+   },
+   "joinURL": "https://meet.google.com/dhd-nqkk-ntn",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-09T16:00:00+01:00",
+     "start": "2026-11-09T15:00:00+01:00"
+    }
+   },
+   "title": "Board call"
+  },
+  {
+   "attendeeCount": 3,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=MWYyMjBmMWE1MTEzZjk3Zjg2Y2IgeW91QGFjbWUuY29t",
+   "iCalUID": "1f220f1a5113f97f86cb@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "1f220f1a5113f97f86cb"
+   },
+   "joinURL": "https://meet.google.com/gxu-szix-xey",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-18T10:30:00+01:00",
+     "start": "2026-11-18T10:00:00+01:00"
+    }
+   },
+   "title": "Pricing check-in"
+  },
+  {
+   "attendeeCount": 9,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=OTNhNmExZGY0MTA4NTE2MGE3OGMgeW91QGFjbWUuY29t",
+   "iCalUID": "93a6a1df41085160a78c@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "93a6a1df41085160a78c"
+   },
+   "joinURL": "https://meet.google.com/hla-uzwj-gbo",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-19T16:00:00+01:00",
+     "start": "2026-11-19T13:00:00+01:00"
+    }
+   },
+   "title": "Quarterly planning"
+  },
+  {
+   "attendeeCount": 4,
+   "attendeeDomains": [
+    "acme.com",
+    "northwind.example"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=OTAyMjhlMjQzM2ExZWNhOTE2ZjggeW91QGFjbWUuY29t",
+   "iCalUID": "90228e2433a1eca916f8@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "90228e2433a1eca916f8"
+   },
+   "joinURL": "https://meet.google.com/vww-tgau-mot",
+   "response": "needsAction",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-11-26T15:45:00+01:00",
+     "start": "2026-11-26T15:00:00+01:00"
+    }
+   },
+   "title": "Contract call with Northwind"
+  },
+  {
+   "attendeeCount": 5,
+   "attendeeDomains": [
+    "acme.com",
+    "harbor.example"
+   ],
+   "colorKey": "blue",
+   "htmlLink": "https://www.google.com/calendar/event?eid=MGNjYTk0Y2I1OGY5NmY2Yzk2OTUgeW91QGFjbWUuY29t",
+   "iCalUID": "0cca94cb58f96f6c9695@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "you@acme.com"
+    },
+    "googleID": "0cca94cb58f96f6c9695"
+   },
+   "joinURL": "https://meet.google.com/kbj-oihb-ntt",
+   "response": "accepted",
+   "time": {
+    "timed": {
+     "authoredZone": "Europe/Amsterdam",
+     "end": "2026-12-02T15:00:00+01:00",
+     "start": "2026-12-02T14:00:00+01:00"
+    }
+   },
+   "title": "Investor update"
+  },
+  {
+   "attendeeCount": 12,
+   "attendeeDomains": [
+    "acme.com"
+   ],
+   "colorKey": "purple",
+   "htmlLink": "https://www.google.com/calendar/event?eid=YzI3ZDI5OThhNDg1Zjc0YWQ4MWEgY183ZjNlOWExb2Zmc2l0ZXNAZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ",
+   "iCalUID": "c27d2998a485f74ad81a@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000002",
+     "googleID": "c_7f3e9a1offsites@group.calendar.google.com"
+    },
+    "googleID": "c27d2998a485f74ad81a"
+   },
+   "location": "Hotel Zeezicht\nNergenspad 5, Zandvoort",
+   "response": "accepted",
+   "time": {
+    "allDay": {
+     "endExclusive": "2026-11-28",
+     "start": "2026-11-25"
+    }
+   },
+   "title": "Team offsite"
+  }
+ ],
+ "fetchedAt": "2026-11-04T12:05:00+01:00",
+ "locale": "en_GB",
+ "now": "2026-11-04T12:10:00+01:00",
+ "timeZone": "Europe/Amsterdam"
+}

@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day: all your Google calendars as one</title>
+<meta name="description" content="Your Google calendars as one, read-only, for Mac and iPhone. The next event on the Lock Screen, today in two sentences, the month's big events by name.">
+<meta property="og:title" content="Day: all your Google calendars as one">
+<meta property="og:description" content="The next event on the Lock Screen, today in two sentences, and the month's big events by name. Edits open in Google Calendar.">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <section class="hero">
+    <div>
+      <h1>See all your Google calendars as one.</h1>
+      <p class="lede">Day shows the calendars Google lists for each of your accounts as one, read-only: the next event on your Lock Screen, today in two sentences, and the month's big events by name. Edits open in Google Calendar.</p>
+      <div class="actions">
+        <a class="button primary" href="https://github.com/spashii/day/releases/latest">Download for Mac</a>
+        <a class="button" href="https://github.com/spashii/day">View on GitHub</a>
+      </div>
+      <p class="meta">Free and open source · Signed and notarized · macOS 26 or later</p>
+    </div>
+
+    <div class="day" role="img" aria-label="Day view for Wednesday 4 November at 12:10. Four to go, done at 17:00. Investor call and Acme sync overlap at 14:30. Lunch with Maya at 12:30, Investor call at 14:00, Acme sync at 14:30, Weekly planning at 16:00.">
+      <p class="back">‹ November</p>
+      <h2 class="weekday">Wednesday</h2>
+      <p class="date">4 November</p>
+      <p class="summary">Four to go, done at 17:00. <span>Investor call and Acme sync overlap at 14:30.</span></p>
+      <p class="note">Lisbon, day 2 of 3</p>
+      <p class="note">Earlier: Standup, Design review</p>
+      <div class="now"><span>12:10</span><hr></div>
+      <ul>
+        <li class="row" style="--c: var(--green)">
+          <div class="time">12:30<span>13:30</span></div><i class="rule"></i>
+          <div><div class="title">Lunch with Maya</div><small>in 20 min</small></div>
+        </li>
+        <li class="row" style="--c: var(--blue)">
+          <div class="time">14:00<span>15:00</span></div><i class="rule"></i>
+          <div><div class="title">Investor call</div><small>No reply yet</small></div>
+        </li>
+        <li class="row recurring" style="--c: var(--blue)">
+          <div class="time">14:30<span>15:00</span></div><i class="rule"></i>
+          <div><div class="title">Acme sync</div></div>
+        </li>
+        <li class="gap">1 h free</li>
+        <li class="row recurring" style="--c: var(--blue)">
+          <div class="time">16:00<span>17:00</span></div><i class="rule"></i>
+          <div><div class="title">Weekly planning</div></div>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="points">
+    <div class="point">
+      <h2>Next, on the Lock Screen</h2>
+      <p>The next event from every calendar, above or below the clock.</p>
+    </div>
+    <div class="point">
+      <h2>Today, in two sentences</h2>
+      <p>Four to go, done at 17:00. Written from your events by fixed rules.</p>
+    </div>
+    <div class="point">
+      <h2>The month, by name</h2>
+      <p>Big events get a bar or a title. Recurring ones are dots.</p>
+    </div>
+  </section>
+
+  <section class="bottom">
+    <p>Day reads your calendars from Google and keeps them on this device. It collects nothing. It also checks for updates.</p>
+    <p>Google will flag it as unverified. The iPhone app is not on the App Store yet.</p>
+    <div class="actions">
+      <a class="button primary" href="https://github.com/spashii/day/releases/latest">Download for Mac</a>
+    </div>
+    <div class="brew">
+      <p>Or with Homebrew:</p>
+      <pre>brew tap spashii/day https://github.com/spashii/day
+brew trust spashii/day
+brew install --cask day</pre>
+    </div>
+  </section>
+</main>
+<footer class="site">Day is MIT licensed and not affiliated with Google. <a href="https://github.com/spashii/day">Source on GitHub</a> · <a href="privacy.html">Privacy</a></footer>
+</body>
+</html>

@@ -1,0 +1,96 @@
+# Two renderers for tools/screenshots.sh, kept out of app/project.yml so nothing here can end
+# up in a release. Each compiles the app's own view files and draws them to PNG files on the
+# invented fixture: the widget's views in the iOS simulator, the Mac views in windows placed
+# off every screen.
+name: Shots
+options:
+  bundleIdPrefix: io.github.spashii.day.shots
+  deploymentTarget:
+    iOS: "26.0"
+    macOS: "26.0"
+  developmentLanguage: en
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    ARCHS: arm64
+    # The placeholder keeps every store on the fixture, as in the apps.
+    DAY_GOOGLE_CLIENT_ID: 000000000000-placeholder
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGN_IDENTITY: "-"
+    DEVELOPMENT_TEAM: ""
+packages:
+  DayCore:
+    path: ../../Core
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    exactVersion: 2.10.1
+targets:
+  DayWidgetShots:
+    type: application
+    platform: iOS
+    sources:
+      - path: Widget
+        excludes: ["Info.plist"]
+      # The widget's views, provider and data, without its @main and its previews.
+      - path: ../../app/Widget
+        excludes: ["Info.plist", "*.entitlements", "NextWidget.swift", "NextPreviews.swift"]
+      - path: ../../app/Shared/Model
+        includes: ["KeychainTokenStore.swift"]
+      - path: ../../Core/Tests/DayCoreTests/Fixtures/invented-week.json
+        buildPhase: resources
+    info:
+      path: Widget/Info.plist
+      properties:
+        CFBundleDisplayName: Day Shots
+        UILaunchScreen: {}
+        GoogleClientID: $(DAY_GOOGLE_CLIENT_ID).apps.googleusercontent.com
+    settings:
+      base:
+        PRODUCT_NAME: DayWidgetShots
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.spashii.day.shots.widget
+        TARGETED_DEVICE_FAMILY: "1"
+    dependencies:
+      - package: DayCore
+        product: DayCore
+      - sdk: WidgetKit.framework
+
+  DayMacShots:
+    type: application
+    platform: macOS
+    sources:
+      - path: Mac
+        excludes: ["Info.plist"]
+      - path: ../../app/Shared
+      # The Mac app's views and state, without its @main.
+      - path: ../../app/Mac
+        excludes: ["Info.plist", "*.entitlements", "DayMacApp.swift"]
+      - path: ../../Core/Tests/DayCoreTests/Fixtures/invented-week.json
+        buildPhase: resources
+    info:
+      path: Mac/Info.plist
+      properties:
+        CFBundleName: Day Shots
+        # An accessory app: no Dock icon and no menu bar while it draws.
+        LSUIElement: true
+        GoogleClientID: $(DAY_GOOGLE_CLIENT_ID).apps.googleusercontent.com
+    settings:
+      base:
+        PRODUCT_NAME: DayMacShots
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.spashii.day.shots.mac
+        ENABLE_HARDENED_RUNTIME: NO
+    dependencies:
+      - package: DayCore
+        product: DayCore
+      - package: Sparkle
+      - sdk: ServiceManagement.framework
+
+schemes:
+  DayWidgetShots:
+    build:
+      targets:
+        DayWidgetShots: all
+  DayMacShots:
+    build:
+      targets:
+        DayMacShots: all

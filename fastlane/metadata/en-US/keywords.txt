@@ -1,0 +1,1 @@
+calendar,agenda,widget,lock screen,events,month,schedule,today,read-only

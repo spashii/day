@@ -1,0 +1,227 @@
+name: Day
+options:
+  bundleIdPrefix: io.github.spashii
+  deploymentTarget:
+    iOS: "26.0"
+    macOS: "26.0"
+  developmentLanguage: en
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    ARCHS: arm64
+    # tools/build.sh and tools/release.sh set these from VERSION and the commit count.
+    MARKETING_VERSION: "0.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    # The Google OAuth client (iOS type, no secret), without its .apps.googleusercontent.com
+    # suffix. The placeholder keeps both apps on the invented fixture until a client exists;
+    # the real value goes here and nowhere else.
+    DAY_GOOGLE_CLIENT_ID: 000000000000-placeholder
+    SWIFT_EMIT_LOC_STRINGS: YES
+    LOCALIZATION_PREFERS_STRING_CATALOGS: YES
+    DEAD_CODE_STRIPPING: YES
+packages:
+  # Model, Google client, sync and every rule; shared with the widget and day-cli.
+  DayCore:
+    path: ../Core
+  # Updates: checks the appcast on the website and installs signed releases.
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    exactVersion: 2.10.1
+targets:
+  # Day for macOS: a regular app with a Dock icon, unsandboxed, released with Developer ID.
+  # No App Group and no extension, so it needs no provisioning profile.
+  DayMac:
+    type: application
+    platform: macOS
+    sources:
+      - path: Mac
+        excludes: ["Info.plist", "*.entitlements"]
+      - path: Shared
+      # Invented events for previews, screenshots and running without a Google client.
+      - path: ../Core/Tests/DayCoreTests/Fixtures/invented-week.json
+        buildPhase: resources
+      # The icon and the privacy manifest, picked up once they exist. Globs rather than
+      # paths, because XcodeGen adds a missing path anyway and the build then fails.
+      - path: .
+        includes: ["AppIcon.icon", "PrivacyInfo.xcprivacy"]
+        buildPhase: resources
+      # Shipped inside the app, as the licenses of the included libraries require.
+      - path: ..
+        includes: ["LICENSE", "THIRD_PARTY_NOTICES.md"]
+        buildPhase: resources
+    info:
+      path: Mac/Info.plist
+      properties:
+        CFBundleName: Day
+        CFBundleDisplayName: Day
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSMinimumSystemVersion: "26.0"
+        LSApplicationCategoryType: public.app-category.productivity
+        NSHumanReadableCopyright: Free software under the MIT License.
+        GoogleClientID: $(DAY_GOOGLE_CLIENT_ID).apps.googleusercontent.com
+        SUFeedURL: https://spashii.github.io/day/appcast.xml
+        # Updates must be signed with the matching private key, kept with the Developer ID.
+        SUPublicEDKey: YLvPSGEaYiPsXphy/q9LCDGs2s0qp8hM2LVBIWbl78c=
+    settings:
+      base:
+        PRODUCT_NAME: Day
+        PRODUCT_MODULE_NAME: DayMac
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.spashii.day
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        # Ad hoc ("Sign to Run Locally") unless tools/build.sh passes the "Blend Dev"
+        # identity or tools/release.sh the Developer ID. The hardened runtime is on so a
+        # Release build can be notarized.
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGN_IDENTITY: "-"
+        DEVELOPMENT_TEAM: ""
+        ENABLE_HARDENED_RUNTIME: YES
+      configs:
+        # Library validation under the hardened runtime refuses Sparkle, and the previews
+        # library, when the app is signed with a certificate that has no team, like "Blend
+        # Dev". Debug runs without it; Release, signed with the Developer ID, keeps it.
+        Debug:
+          ENABLE_HARDENED_RUNTIME: NO
+        # Xcode otherwise adds the debugger entitlement to every build, and notarization
+        # rejects an app that carries it.
+        Release:
+          CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
+    dependencies:
+      - package: DayCore
+        product: DayCore
+      - package: Sparkle
+      - sdk: ServiceManagement.framework
+
+  # Day for iPhone. Shares app/Shared with the Mac and embeds the Lock Screen widget; the
+  # App Group carries the widget snapshot and doubles as the keychain access group.
+  DayPhone:
+    type: application
+    platform: iOS
+    sources:
+      - path: iPhone
+        excludes: ["Info.plist", "*.entitlements"]
+      - path: Shared
+      - path: ../Core/Tests/DayCoreTests/Fixtures/invented-week.json
+        buildPhase: resources
+      - path: .
+        includes: ["AppIcon.icon", "PrivacyInfo.xcprivacy"]
+        buildPhase: resources
+    info:
+      path: iPhone/Info.plist
+      properties:
+        CFBundleDisplayName: Day
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSRequiresIPhoneOS: true
+        NSHumanReadableCopyright: Free software under the MIT License.
+        ITSAppUsesNonExemptEncryption: false
+        UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        GoogleClientID: $(DAY_GOOGLE_CLIENT_ID).apps.googleusercontent.com
+        # day:// for widget taps; the reversed client ID for Google's sign-in redirect.
+        CFBundleURLTypes:
+          - CFBundleURLName: io.github.spashii.day
+            CFBundleURLSchemes:
+              - day
+              - com.googleusercontent.apps.$(DAY_GOOGLE_CLIENT_ID)
+        UIBackgroundModes:
+          - fetch
+        BGTaskSchedulerPermittedIdentifiers:
+          - io.github.spashii.day.refresh
+    entitlements:
+      path: iPhone/Day.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.io.github.spashii.day
+    settings:
+      base:
+        PRODUCT_NAME: Day
+        PRODUCT_MODULE_NAME: DayPhone
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.spashii.day
+        TARGETED_DEVICE_FAMILY: "1"
+        # The Mac has its own app; the iPhone build stays off Apple silicon Macs and Vision Pro.
+        SUPPORTS_MACCATALYST: NO
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
+        SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: JMCP69LCSU
+    dependencies:
+      - package: DayCore
+        product: DayCore
+      - target: DayWidget
+      - sdk: WidgetKit.framework
+
+  # The Lock Screen widget "Next". Same App Group as the app and no Data Protection
+  # entitlement, which would hide the widget whenever the phone is locked.
+  DayWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Widget
+        excludes: ["Info.plist", "*.entitlements"]
+      # Stage two refreshes tokens from the shared keychain itself.
+      - path: Shared/Model
+        includes: ["KeychainTokenStore.swift"]
+      # Realistic invented data for the widget gallery.
+      - path: ../Core/Tests/DayCoreTests/Fixtures/invented-week.json
+        buildPhase: resources
+    info:
+      path: Widget/Info.plist
+      properties:
+        CFBundleDisplayName: Day
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        GoogleClientID: $(DAY_GOOGLE_CLIENT_ID).apps.googleusercontent.com
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: Widget/DayWidget.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.io.github.spashii.day
+    settings:
+      base:
+        PRODUCT_NAME: DayWidget
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.spashii.day.widget
+        TARGETED_DEVICE_FAMILY: "1"
+        APPLICATION_EXTENSION_API_ONLY: YES
+        SKIP_INSTALL: YES
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: JMCP69LCSU
+    dependencies:
+      - package: DayCore
+        product: DayCore
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+
+schemes:
+  DayMac:
+    build:
+      targets:
+        DayMac: all
+    run:
+      config: Debug
+      commandLineArguments:
+        "-UseFixtures invented-week": false
+        "-Now 2026-11-04T12:10": false
+    archive:
+      config: Release
+  DayPhone:
+    build:
+      targets:
+        DayPhone: all
+        DayWidget: all
+    run:
+      config: Debug
+      commandLineArguments:
+        "-UseFixtures invented-week": false
+        "-Now 2026-11-04T12:10": false
+    archive:
+      config: Release

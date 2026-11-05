@@ -1,0 +1,15 @@
+# The App Store Connect API key and its generated files never go into git.
+api_key.json
+AuthKey*.p8
+*.p8
+report.xml
+Preview.html
+screenshots/
+
+# App Review contact details and the demo account's sign-in.
+metadata/review_information/email_address.txt
+metadata/review_information/phone_number.txt
+metadata/review_information/first_name.txt
+metadata/review_information/last_name.txt
+metadata/review_information/demo_user.txt
+metadata/review_information/demo_password.txt

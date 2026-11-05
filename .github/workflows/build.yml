@@ -1,0 +1,24 @@
+name: Build
+
+# A check that a clean macOS machine can test and build Day, run by hand. It signs nothing,
+# notarizes nothing and uploads nothing: releases are built, signed and notarized with
+# tools/release.sh on a Mac that holds the Developer ID.
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The build number is the commit count, which a shallow clone would make 1.
+          fetch-depth: 0
+      - name: Install build tools
+        run: brew install xcodegen
+      - name: Test, build and package
+        run: tools/release.sh --dry-run
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Day
+          path: build/release/Day-*.dmg*

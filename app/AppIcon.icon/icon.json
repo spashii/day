@@ -1,0 +1,26 @@
+{
+  "fill" : { "solid" : "display-p3:1.000,1.000,1.000,1" },
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "image-name" : "Bar.svg",
+          "name" : "Bar",
+          "fill" : { "solid" : "display-p3:0.188,0.455,0.996,1" }
+        },
+        {
+          "image-name" : "Dots.svg",
+          "name" : "Dots",
+          "fill" : { "solid" : "display-p3:0.557,0.557,0.576,1" }
+        }
+      ],
+      "shadow" : { "kind" : "none", "opacity" : 0 },
+      "specular" : false,
+      "translucency" : { "enabled" : false, "value" : 0 }
+    }
+  ],
+  "supported-platforms" : {
+    "circles" : [ "watchOS" ],
+    "squares" : "shared"
+  }
+}
