@@ -8,6 +8,7 @@ import SwiftUI
 /// Calendar's, one tap away.
 struct EventDetail: View {
     @EnvironmentStore private var store
+    @EnvironmentSymbols private var symbols
     @Environment(\.handoff) private var handoff
     @Environment(\.openURL) private var openURL
 
@@ -80,17 +81,17 @@ struct EventDetail: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// `Work · you@acme.com`, with the calendar's color mark. A primary calendar is named by
-    /// its address in Google, so it shows the address once.
+    /// `Work · you@acme.com`, with the calendar's mark: its symbol in the calendar's color
+    /// when it has one, else the color's dot. A primary calendar is named by its address in
+    /// Google, so it shows the address once.
     @ViewBuilder
     private func calendarLine(_ id: CalendarID) -> some View {
         let info = store.calendarInfo(id)
         let email = store.account(id.account)?.email
         let name = info?.name ?? id.googleID
         HStack(spacing: Spacing.cell) {
-            Circle()
-                .fill(info?.markColor ?? event.markColor)
-                .frame(width: 8, height: 8)
+            CalendarMark(
+                symbol: symbols.symbol(for: id), color: info?.markColor ?? event.markColor, dot: 8)
             Text(verbatim: email.map { $0 == name ? name : "\(name) · \($0)" } ?? name)
                 .lineLimit(1)
         }
@@ -163,6 +164,20 @@ struct EventMenuItems: View {
         .sheet(isPresented: .constant(true)) {
             EventSheet(event: event)
                 .calendarStore(store)
+        }
+        .calendarStore(store)
+}
+
+#Preview("Event sheet, with symbols") {
+    let store = PreviewStore.make()
+    let event = store.dayEvents(store.today).first { $0.title == "Investor call" }!
+    // The Investor call sits on both accounts, so the sheet shows one symbol and one dot.
+    let symbols = CalendarSymbols([event.id.calendar: CalendarSymbol.named("briefcase")!])
+    Text(verbatim: "Day")
+        .sheet(isPresented: .constant(true)) {
+            EventSheet(event: event)
+                .calendarStore(store)
+                .calendarSymbols(symbols)
         }
         .calendarStore(store)
 }

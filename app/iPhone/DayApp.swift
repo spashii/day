@@ -2,8 +2,9 @@ import DayCore
 import SwiftUI
 
 /// The iPhone entry point. It picks the store, hands it to `RootView` and drives the model's
-/// life cycle: a refresh at launch and on every return to the front, a last fetch and widget
-/// reload as the app leaves, and the background refresh task.
+/// life cycle: a refresh at launch and on every return to the front (pull to refresh is the
+/// views' own), a last read of the widget's days as the app leaves, and the background
+/// refresh task, asked for again on every change of phase so a request is always pending.
 ///
 /// The invented fixture runs when `-UseFixtures` is passed or no Google client is
 /// configured; otherwise `AppModel` runs on the real engine.
@@ -56,6 +57,7 @@ final class AppLaunch {
         switch phase {
         case .active:
             model.sceneDidBecomeActive()
+            BackgroundRefresh.schedule(for: model)
         case .background:
             BackgroundRefresh.schedule(for: model)
             BackgroundTime.run("Final refresh") { await model.sceneDidEnterBackground() }

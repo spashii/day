@@ -207,8 +207,8 @@ struct MonthMarkTests {
 
     // MARK: Rule 5, dots for short internal calls
     //
-    // This is the whole of rule 5. If the owner says no, delete this section and the marked
-    // branch at the end of monthMark: every timed one-off is then a titled line.
+    // This is the whole of rule 5, a settled choice. It pins the marked branch at the end of
+    // monthMark: without it every timed one-off is a titled line.
 
     @Test func shortInternalOneOffsAreDots() {
         let call = TestData.event(

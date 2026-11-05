@@ -10,6 +10,8 @@ import SwiftUI
 struct DayList: View {
     @EnvironmentStore private var store
     @Environment(\.dayListMargin) private var margin
+    @Environment(\.presentEvent) private var presentEvent
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     let day: CivilDate
     /// The day above the summary. The Mac inspector writes `Wednesday 4 November` in Title 2;
@@ -133,7 +135,13 @@ struct DayList: View {
                 .listRowInsets(.vertical, 2)
                 .selectionDisabled()
         case .row(.event(let event, let secondLine, let showsJoin)):
-            HStack(spacing: Spacing.cell) {
+            // Join trails the row, or sits under it at the accessibility sizes, where the
+            // title needs the whole width.
+            let layout =
+                typeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.cell))
+                : AnyLayout(HStackLayout(spacing: Spacing.cell))
+            layout {
                 openButton(event) {
                     EventRowContent(event: event, secondLine: secondLine)
                 }
@@ -157,6 +165,8 @@ struct DayList: View {
             selectionBinding.wrappedValue = event.id
             if let onOpen {
                 onOpen(event)
+            } else if let presentEvent {
+                presentEvent(event, zoom: zoom)
             } else {
                 presentedBinding.wrappedValue = event.id
             }

@@ -24,8 +24,10 @@ struct FirstRunView: View {
                 } else {
                     AccountsView(addTitle: "Add Another Account…")
                         .toolbar {
+                            // Done finishes first run and lands on today, so it is the
+                            // sheet's confirm action, tinted, and Return on the Mac.
                             ToolbarItem(placement: .confirmationAction) {
-                                Button("Done", action: onDone)
+                                Button("Done", role: .confirm, action: onDone)
                                     .disabled(store.needsFirstRun)
                             }
                         }

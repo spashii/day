@@ -426,7 +426,7 @@ extension DecodingTests {
             let from = Date(timeIntervalSince1970: 1_790_719_200)
             let to = Date(timeIntervalSince1970: 1_804_201_200)
             let request = api.eventsRequest(
-                calendarID: "en.dutch#holiday@group.v.calendar.google.com", from: from, to: to,
+                calendarID: "en.dutch#holiday@group.v.calendar.google.com", query: .window(from: from, to: to),
                 pageToken: "p+1", accessToken: "access-gmail")
             let url = try #require(request.url)
             #expect(url.absoluteString.hasPrefix(
@@ -434,12 +434,15 @@ extension DecodingTests {
             #expect(url.fragment == nil)
             let items = Dictionary(uniqueKeysWithValues: (URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []).map { ($0.name, $0.value ?? "") })
             #expect(items["singleEvents"] == "true")
-            #expect(items["orderBy"] == "startTime")
+            // Google sends no sync token back to a read ordered by start, and refuses the
+            // order beside a token.
+            #expect(items["orderBy"] == nil)
             #expect(items["timeMin"] == "2026-09-29T22:00:00Z")
             #expect(items["timeMax"] == "2027-03-04T23:00:00Z")
             #expect(items["maxResults"] == "2500")
             #expect(items["eventLabelVersion"] == "1")
             #expect(items["fields"]?.contains("eventLabelId") == true)
+            #expect(items["fields"]?.hasPrefix("nextPageToken,nextSyncToken,") == true)
             #expect(items["pageToken"] == "p+1")
             #expect(url.query()?.contains("p%2B1") == true)
             #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer access-gmail")
@@ -467,7 +470,8 @@ extension DecodingTests {
                     return try Recorded.google()(request)
                 }, retry: .noWait)
             let list = try await api.calendarList(accessToken: "access-gmail")
-            #expect(list.count == 3)
+            #expect(list.entries.count == 3)
+            #expect(list.nextSyncToken == "invented")
             #expect(calls.value == 3)
 
             let scoped = CalendarAPI(
@@ -615,7 +619,9 @@ extension DecodingTests {
             let files = try FileManager.default.contentsOfDirectory(atPath: h.folder.path(percentEncoded: false))
             #expect(Set(files) == [
                 "accounts.json", "calendars-100000000000000000001.json", "calendars-100000000000000000002.json",
-                "events-100000000000000000001.json", "events-100000000000000000002.json", "widget-snapshot.json",
+                "events-100000000000000000001.json", "events-100000000000000000002.json",
+                "sync-100000000000000000001.json", "sync-100000000000000000002.json",
+                "near-100000000000000000001.json", "near-100000000000000000002.json", "widget-snapshot.json",
             ])
         }
 
@@ -834,13 +840,17 @@ extension DecodingTests {
             #expect(report.outcome == .current)
             let added = h.stub.requests[before...].filter { $0.url?.path().hasSuffix("/events") == true }
             #expect(!added.isEmpty)
+            // The full read covered through today plus 127, so the stretch starts the day after.
             for request in added {
                 let query = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)?.queryItems ?? []
-                #expect(query.first { $0.name == "timeMin" }?.value == "2027-03-04T23:00:00Z")
+                #expect(query.first { $0.name == "timeMin" }?.value == "2027-03-11T23:00:00Z")
                 #expect(query.first { $0.name == "timeMax" }?.value == "2027-04-30T22:00:00Z")
+                #expect(query.first { $0.name == "syncToken" } == nil)
             }
-            let file = try #require(h.cache.read(EventsFile.self, from: CacheFile.events(DecodingTests.gmail)))
-            #expect(file.window == CivilDate(year: 2026, month: 9, day: 30)...CivilDate(year: 2027, month: 4, day: 30))
+            let file = try #require(h.cache.account(DecodingTests.gmail))
+            let personal = CalendarID(account: DecodingTests.gmail, googleID: "you@gmail.com")
+            #expect(file.state(of: personal)?.days == CivilDate(year: 2026, month: 9, day: 30)...CivilDate(year: 2027, month: 4, day: 30))
+            #expect(report.data.syncedDays == CivilDate(year: 2026, month: 9, day: 30)...CivilDate(year: 2027, month: 4, day: 30))
             #expect(file.fetchedAt == h.fixture.now)
             #expect(file.events.contains { $0.title == "Quarter close" })
             #expect(file.events.filter { $0.title == "Lunch with Maya" }.count == 1)
@@ -859,16 +869,17 @@ extension DecodingTests {
             func snapshot(_ at: Date, accounts: Int = 2) -> WidgetSnapshot {
                 WidgetSnapshot(fetchedAt: at, accountCount: accounts, signedOutAccounts: 0, events: [])
             }
-            #expect(try snapshot(t).write(to: cache))
-            #expect(try snapshot(t.addingTimeInterval(-60)).write(to: cache) == false)
+            let now = t.addingTimeInterval(120)
+            #expect(try snapshot(t).write(to: cache, now: now))
+            #expect(try snapshot(t.addingTimeInterval(-60)).write(to: cache, now: now) == false)
             #expect(WidgetSnapshot.read(from: cache)?.fetchedAt == t)
-            #expect(try snapshot(t, accounts: 1).write(to: cache))
+            #expect(try snapshot(t, accounts: 1).write(to: cache, now: now))
             #expect(WidgetSnapshot.read(from: cache)?.accountCount == 1)
-            #expect(try snapshot(t.addingTimeInterval(60)).write(to: cache))
-            #expect(try snapshot(t, accounts: 3).write(to: cache, force: true))
+            #expect(try snapshot(t.addingTimeInterval(60)).write(to: cache, now: now))
+            #expect(try snapshot(t, accounts: 3).write(to: cache, force: true, now: now))
             #expect(WidgetSnapshot.read(from: cache)?.accountCount == 3)
-            #expect(snapshot(t).isFresh(at: t.addingTimeInterval(14 * 60)))
-            #expect(!snapshot(t).isFresh(at: t.addingTimeInterval(15 * 60)))
+            #expect(snapshot(t).isFresh(at: t.addingTimeInterval(59)))
+            #expect(!snapshot(t).isFresh(at: t.addingTimeInterval(60)))
             #expect(!snapshot(t).isFresh(at: t.addingTimeInterval(-60)))
         }
 
@@ -884,7 +895,7 @@ extension DecodingTests {
             let h = try Harness()
             _ = await h.engine.refresh()
             let before = h.stub.requests.count
-            h.advance(10 * 60)
+            h.advance(30)
             let snapshot = await h.engine.refreshWidgetSnapshot()
             #expect(snapshot?.fetchedAt == h.fixture.now)
             #expect(h.stub.requests.count == before)
@@ -903,7 +914,7 @@ extension DecodingTests {
             #expect(added.allSatisfy { $0.hasSuffix("/events") || $0 == "/token" })
             #expect(snapshot.events.contains { $0.title == "Standup" })
             // The app's own files are untouched.
-            #expect(h.cache.read(EventsFile.self, from: CacheFile.events(DecodingTests.acme))?.fetchedAt == h.fixture.now)
+            #expect(h.cache.account(DecodingTests.acme)?.fetchedAt == h.fixture.now)
         }
 
         @Test func widgetFallsBackWhenGoogleIsTooSlow() async throws {

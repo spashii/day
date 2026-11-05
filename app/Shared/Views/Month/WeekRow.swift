@@ -1,9 +1,10 @@
 import DayCore
 import SwiftUI
 
-/// One week of the month: seven equal columns, a hairline above, the numerals, the bar
-/// lanes, the titled lines and the dots. The iPhone row has one fixed height so the grid
-/// reads as a grid; the Mac row grows until nothing hides.
+/// One week of a month page: seven equal columns, a hairline above, the numerals, the bar
+/// lanes, the titled lines and the dots. Days of the neighbouring month are empty cells. The
+/// iPhone row takes the height its page gives it and fits its titled lines to that; the Mac
+/// row is at least as tall as its content, so nothing hides.
 struct WeekRow: View {
     @EnvironmentStore private var store
     @Environment(\.handoff) private var handoff
@@ -12,34 +13,37 @@ struct WeekRow: View {
     let today: CivilDate
     /// One column's width, which decides what the size-drop rule keeps.
     let columnWidth: CGFloat
-    /// The Mac's selected day, tinted.
+    /// The row's sizes at the current text size, shared with the grid.
+    let metrics: MonthMetrics
+    /// The iPhone row's height, its share of the page. The Mac row ignores it.
+    var height: CGFloat = 0
+    /// The selected day: a quiet ring around the numeral on the iPhone, a tint over the
+    /// cell on the Mac.
     var selection: CivilDate?
     /// The iPhone's zoom source for the Day pushed from a cell.
     var zoom: Namespace.ID?
     let onSelect: (CivilDate) -> Void
 
-    // Sizes from the mockup at the default text size, scaled with it up to the grid's cap.
-    @ScaledMetric(relativeTo: .caption2) private var rowHeight: CGFloat = Metrics.rowHeight
-    @ScaledMetric(relativeTo: .callout) private var numeralRow: CGFloat = Metrics.numeralRow
-    @ScaledMetric(relativeTo: .callout) private var numeralCircle: CGFloat = Metrics.numeralCircle
-    @ScaledMetric(relativeTo: .caption2) private var barHeight: CGFloat = Metrics.barHeight
-    @ScaledMetric(relativeTo: .caption2) private var titleLine: CGFloat = Metrics.titleLine
-    /// Narrower than this and one-off titles drop to their colored rules (step one).
-    @ScaledMetric(relativeTo: .caption2) private var minTitledWidth: CGFloat = 40
-    /// Narrower than this and a bar keeps its fill but drops its title (step two).
-    @ScaledMetric(relativeTo: .caption2) private var minBarTitleWidth: CGFloat = 28
+    private var numeralRow: CGFloat { metrics.numeralRow }
+    private var numeralCircle: CGFloat { metrics.numeralCircle }
+    private var barHeight: CGFloat { metrics.barHeight }
+    private var titleLine: CGFloat { metrics.titleLine }
 
     /// The Mac event whose popover is open.
     @State private var shownEvent: EventID?
 
     var body: some View {
-        VStack(spacing: 0) {
-            Divider()
+        Group {
             if Platform.isMac {
                 macRow
             } else {
                 phoneRow
             }
+        }
+        // Drawn over the row's top edge rather than stacked above it, so the rows of a page
+        // add up to exactly the page's height.
+        .overlay(alignment: .top) {
+            Divider()
         }
     }
 
@@ -48,17 +52,22 @@ struct WeekRow: View {
     private var phoneRow: some View {
         HStack(spacing: 0) {
             ForEach(layout.cells) { cell in
-                Button {
-                    onSelect(cell.day)
-                } label: {
-                    phoneCell(cell)
+                if cell.isShown {
+                    Button {
+                        onSelect(cell.day)
+                    } label: {
+                        phoneCell(cell)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(sentence(for: cell))
+                    .accessibilityAddTraits(cell.day == selection ? .isSelected : [])
+                    .modifier(ZoomSource(id: cell.day, namespace: zoom))
+                } else {
+                    emptyCell
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel(sentence(for: cell))
-                .modifier(ZoomSource(id: cell.day, namespace: zoom))
             }
         }
-        .frame(height: rowHeight)
+        .frame(height: height)
         .overlay(alignment: .top) {
             lanes
                 .padding(.top, numeralRow)
@@ -73,28 +82,28 @@ struct WeekRow: View {
             Color.clear
                 .frame(height: lanesHeight(cell))
             phoneTitles(cell)
-                .padding(.top, Metrics.gap)
+                .padding(.top, MonthMetrics.gap)
             Spacer(minLength: 0)
             dots(cell.dotCount)
-                .frame(height: Metrics.dotsRow, alignment: .top)
+                .frame(height: MonthMetrics.dotsRow)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .contentShape(.rect)
     }
 
-    /// As many titled lines as the fixed row has room for; when they do not all fit, the
-    /// last line becomes `+2`. Hidden bars count into it.
+    /// As many titled lines as the row has room for; when they do not all fit, the last
+    /// line becomes `+2`. Hidden bars count into it. The selected day's list under the page
+    /// names everything a `+2` stands for.
     @ViewBuilder
     private func phoneTitles(_ cell: WeekLayout.Cell) -> some View {
-        let room = rowHeight - numeralRow - lanesHeight(cell) - Metrics.dotsRow - Metrics.gap
-        let capacity = max(0, Int((room + Metrics.gap) / (titleLine + Metrics.gap)))
+        let capacity = metrics.titleCapacity(cell, height: height)
         let extra = cell.hiddenBars
         let needed = cell.titled.count + (extra > 0 ? 1 : 0)
         let shown = needed <= capacity ? cell.titled.count : max(0, capacity - 1)
         let more = cell.titled.count - shown + extra
 
-        if columnWidth >= minTitledWidth || columnWidth == 0 {
-            VStack(alignment: .leading, spacing: Metrics.gap) {
+        if metrics.drawsTitles(columnWidth: columnWidth) {
+            VStack(alignment: .leading, spacing: MonthMetrics.gap) {
                 ForEach(cell.titled.prefix(shown)) { event in
                     titledLine(event)
                         .frame(height: titleLine)
@@ -127,10 +136,13 @@ struct WeekRow: View {
     private var macRow: some View {
         HStack(alignment: .top, spacing: 0) {
             ForEach(layout.cells) { cell in
-                macCell(cell)
+                if cell.isShown {
+                    macCell(cell)
+                } else {
+                    emptyCell
+                }
             }
         }
-        .fixedSize(horizontal: false, vertical: true)
         .overlay(alignment: .top) {
             lanes
                 .padding(.top, numeralRow)
@@ -145,7 +157,7 @@ struct WeekRow: View {
                 .frame(height: numeralRow, alignment: .topLeading)
             Color.clear
                 .frame(height: lanesHeight(cell))
-            VStack(alignment: .leading, spacing: Metrics.gap) {
+            VStack(alignment: .leading, spacing: MonthMetrics.gap) {
                 ForEach(cell.titled) { event in
                     eventButton(event) {
                         titledLine(event)
@@ -153,13 +165,16 @@ struct WeekRow: View {
                     .frame(height: titleLine)
                 }
             }
-            .padding(.top, Metrics.gap)
+            .padding(.top, MonthMetrics.gap)
+            // The dots keep to the bottom of the cell however tall the window makes the row,
+            // and clear of the last titled line when the row is only as tall as its content.
+            Spacer(minLength: MonthMetrics.gap)
             dots(cell.dotCount)
                 .padding(.leading, 8)
                 .padding(.top, 2)
-                .frame(height: Metrics.dotsRow, alignment: .topLeading)
+                .frame(height: MonthMetrics.dotsRow, alignment: .topLeading)
         }
-        .frame(maxWidth: .infinity, minHeight: Metrics.rowHeight, maxHeight: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background {
             if cell.day == selection {
                 Rectangle().fill(.tint.opacity(0.09))
@@ -169,7 +184,7 @@ struct WeekRow: View {
         .onTapGesture { onSelect(cell.day) }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(sentence(for: cell))
-        .accessibilityAddTraits(.isButton)
+        .accessibilityAddTraits(cell.day == selection ? [.isButton, .isSelected] : .isButton)
         .accessibilityAction { onSelect(cell.day) }
     }
 
@@ -200,12 +215,21 @@ struct WeekRow: View {
 
     // MARK: Shared parts
 
-    /// The day's numeral, `1 Dec` on the first of a month, bold on a red circle for today:
-    /// the only red in the grid.
+    /// A day of the neighbouring month: no numeral, no marks and nothing to tap, so the page
+    /// reads as one month.
+    private var emptyCell: some View {
+        Color.clear
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .accessibilityHidden(true)
+    }
+
+    /// The day's numeral, bold on a red circle for today: the only red in the grid. On the
+    /// iPhone the selected day, when it is not today, gets a ring in the secondary color:
+    /// color in the grid means a calendar, and today's red already marks it when selected.
     private func numeral(_ day: CivilDate) -> some View {
         let isToday = day == today
-        let label = day.day == 1 ? Formatting.firstOfMonth(day, calendar: store.calendar) : String(day.day)
-        return Text(verbatim: label)
+        let isRinged = !Platform.isMac && day == selection && !isToday
+        return Text(verbatim: String(day.day))
             .font(Platform.isMac ? .body : .callout)
             .fontWeight(isToday ? .bold : .regular)
             .monospacedDigit()
@@ -216,18 +240,19 @@ struct WeekRow: View {
             .background {
                 if isToday {
                     Capsule().fill(.red)
+                } else if isRinged {
+                    Capsule().strokeBorder(.secondary, lineWidth: 1.5)
                 }
             }
     }
 
-    /// The room the bars over a day take, so its titled lines start right under them.
     private func lanesHeight(_ cell: WeekLayout.Cell) -> CGFloat {
-        CGFloat(cell.lanesUsed) * (barHeight + Metrics.gap)
+        metrics.lanesHeight(cell)
     }
 
     /// Bars in fixed lanes at the top of the row, each spanning its days.
     private var lanes: some View {
-        VStack(spacing: Metrics.gap) {
+        VStack(spacing: MonthMetrics.gap) {
             ForEach(0..<layout.laneCount, id: \.self) { lane in
                 ColumnSpanLayout {
                     ForEach(layout.bars(inLane: lane)) { bar in
@@ -244,7 +269,7 @@ struct WeekRow: View {
                 .frame(height: barHeight)
             }
         }
-        .padding(.top, Metrics.gap)
+        .padding(.top, MonthMetrics.gap)
     }
 
     /// The event color at 20 percent with the title in the label color. Square where the
@@ -253,7 +278,7 @@ struct WeekRow: View {
         let start: CGFloat = bar.continuesBefore ? 0 : 4
         let end: CGFloat = bar.continuesAfter ? 0 : 4
         let width = columnWidth * CGFloat(bar.columns.count)
-        let showsTitle = columnWidth == 0 || width >= minBarTitleWidth
+        let showsTitle = columnWidth == 0 || width >= metrics.minBarTitleWidth
         return UnevenRoundedRectangle(
             topLeadingRadius: start, bottomLeadingRadius: start, bottomTrailingRadius: end,
             topTrailingRadius: end
@@ -304,7 +329,7 @@ struct WeekRow: View {
             ForEach(0..<min(count, 5), id: \.self) { _ in
                 Circle()
                     .fill(.secondary)
-                    .frame(width: Metrics.dot, height: Metrics.dot)
+                    .frame(width: MonthMetrics.dot, height: MonthMetrics.dot)
             }
         }
         .frame(maxWidth: .infinity, alignment: Platform.isMac ? .leading : .center)
@@ -323,31 +348,6 @@ struct WeekRow: View {
             parts.append("\(Formatting.countCapitalized(cell.recurring.count)) recurring")
         }
         return parts.map { $0 + "." }.joined(separator: " ")
-    }
-
-    private enum Metrics {
-        #if os(macOS)
-            static let rowHeight: CGFloat = 98
-            static let numeralRow: CGFloat = 27
-            static let numeralCircle: CGFloat = 22
-            static let barHeight: CGFloat = 15
-            static let titleLine: CGFloat = 13
-            static let dotsRow: CGFloat = 14
-            static let dot: CGFloat = 4.5
-            /// Between bar lanes and between titled lines.
-            static let gap: CGFloat = 2
-        #else
-            static let rowHeight: CGFloat = 96
-            static let numeralRow: CGFloat = 34
-            static let numeralCircle: CGFloat = 30
-            static let barHeight: CGFloat = 16
-            static let titleLine: CGFloat = 13
-            static let dotsRow: CGFloat = 14
-            static let dot: CGFloat = 5
-            /// Between bar lanes and between titled lines: one point, so a day under one bar
-            /// still has two titled lines in the 96 pt row, and a day under two bars one.
-            static let gap: CGFloat = 1
-        #endif
     }
 }
 

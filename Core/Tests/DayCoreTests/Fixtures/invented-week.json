@@ -280,6 +280,27 @@
    "title": "Berlin"
   },
   {
+   "colorKey": "cyan",
+   "htmlLink": "https://www.google.com/calendar/event?eid=ZTJiOGQ0MWE5MGMzNWY3ZTY2YjEgeW91QGdtYWlsLmNvbQ",
+   "iCalUID": "e2b8d41a90c35f7e66b1@google.com",
+   "id": {
+    "calendar": {
+     "account": "100000000000000000001",
+     "googleID": "you@gmail.com"
+    },
+    "googleID": "e2b8d41a90c35f7e66b1"
+   },
+   "isFree": true,
+   "isOrganizer": true,
+   "time": {
+    "allDay": {
+     "endExclusive": "2026-12-03",
+     "start": "2026-11-28"
+    }
+   },
+   "title": "Copenhagen"
+  },
+  {
    "colorKey": "green",
    "htmlLink": "https://www.google.com/calendar/event?eid=NjFmZjBiMjFjYjg4N2JlZjAwOTYgZW4uZHV0Y2gjaG9saWRheUBncm91cC52LmNhbGVuZGFyLmdvb2dsZS5jb20",
    "iCalUID": "61ff0b21cb887bef0096@google.com",

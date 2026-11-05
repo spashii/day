@@ -2,81 +2,66 @@ import DayCore
 import Foundation
 import Observation
 
-/// Where the month is scrolled and which month it shows. The parent owns it, so the iPhone
-/// title, the Mac toolbar and the Mac menu commands can read and move the same scroll.
+/// Which month is on screen. The month is one page per month with only its own weeks: the
+/// iPhone pages sideways between months, the Mac moves with its toolbar, menus and keys. The
+/// parent owns it, so the iPhone title, the Mac toolbar and the Mac menu commands read and
+/// move the same page.
 @MainActor
 @Observable
 final class MonthScroll {
-    /// The first day of the week row at the top. Nil until something moves the scroll; the
-    /// month then opens with the current week as the top row.
-    var topWeek: CivilDate?
-    /// Week rows at least half on screen, top to bottom.
-    var visibleWeeks: [CivilDate] = []
+    /// The first day of the month on screen. Nil until something moves it; the month then
+    /// opens on today's, and follows today into the next month at midnight.
+    private(set) var page: CivilDate?
 
-    /// The rows the scroll holds, as offsets in weeks from the current week. A jump outside
+    /// The months the iPhone pager holds, as offsets from the current month. A jump outside
     /// widens them, so Go to Date reaches any year.
-    private(set) var weeksBefore = 52
-    private(set) var weeksAfter = 104
+    private(set) var monthsBefore = 24
+    private(set) var monthsAfter = 60
 
     init() {}
 
-    /// Every week row, top to bottom.
-    func weeks(today: CivilDate, calendar: Calendar) -> [CivilDate] {
-        let current = MonthScroll.weekStart(of: today, calendar: calendar)
-        return Array(
-            stride(
-                from: current.adding(days: -7 * weeksBefore),
-                through: current.adding(days: 7 * weeksAfter),
-                by: 7))
+    /// The first day of the month on screen.
+    func shown(today: CivilDate) -> CivilDate {
+        page ?? MonthScroll.firstOfMonth(today)
     }
 
-    /// Puts the week holding `day` at the top.
-    func show(_ day: CivilDate, today: CivilDate, calendar: Calendar) {
-        let week = MonthScroll.weekStart(of: day, calendar: calendar)
-        let current = MonthScroll.weekStart(of: today, calendar: calendar)
-        let offset = current.distance(to: week) / 7
-        weeksBefore = max(weeksBefore, -offset + 8)
-        weeksAfter = max(weeksAfter, offset + 8)
-        topWeek = week
-    }
-
-    /// Puts the week holding the first of the shown month, moved by `months`, at the top:
-    /// the Mac's previous and next month.
-    func showMonth(offset months: Int, today: CivilDate, calendar: Calendar) {
-        let shown = month(today: today, calendar: calendar)
-        let index = shown.year * 12 + (shown.month - 1) + months
-        let first = CivilDate(year: index / 12, month: index % 12 + 1, day: 1)
-        show(first, today: today, calendar: calendar)
-    }
-
-    /// The month holding most of the visible days; on a tie the earlier one, which is the
-    /// one the top rows belong to.
+    /// The month on screen.
     func month(today: CivilDate, calendar: Calendar) -> (year: Int, month: Int) {
-        var weeks = visibleWeeks
-        if weeks.isEmpty {
-            let top = topWeek ?? MonthScroll.weekStart(of: today, calendar: calendar)
-            weeks = (0..<6).map { top.adding(days: 7 * $0) }
-        }
-        var counts: [Int: Int] = [:]
-        for week in weeks {
-            for offset in 0..<7 {
-                let day = week.adding(days: offset)
-                counts[day.year * 12 + day.month - 1, default: 0] += 1
-            }
-        }
-        let best = counts.max { a, b in a.value == b.value ? a.key > b.key : a.value < b.value }!.key
-        return (best / 12, best % 12 + 1)
+        let first = shown(today: today)
+        return (first.year, first.month)
+    }
+
+    /// Every month the iPhone pager holds, as the first day of each, oldest first.
+    func months(today: CivilDate) -> [CivilDate] {
+        let current = MonthScroll.firstOfMonth(today)
+        return (-monthsBefore...monthsAfter).map { MonthScroll.month(current, offset: $0) }
+    }
+
+    /// Turns to the month holding `day`.
+    func show(_ day: CivilDate, today: CivilDate, calendar: Calendar) {
+        let first = MonthScroll.firstOfMonth(day)
+        let offset = MonthScroll.months(from: MonthScroll.firstOfMonth(today), to: first)
+        monthsBefore = max(monthsBefore, -offset + 2)
+        monthsAfter = max(monthsAfter, offset + 2)
+        turn(to: first, calendar: calendar)
+    }
+
+    /// Turns by `months` from the month on screen: the Mac's previous and next month.
+    func showMonth(offset months: Int, today: CivilDate, calendar: Calendar) {
+        show(MonthScroll.month(shown(today: today), offset: months), today: today, calendar: calendar)
+    }
+
+    /// Puts the page whose first day is `first` on screen. The iPhone pager calls it as the
+    /// page settles; everything else goes through `show`.
+    func turn(to first: CivilDate, calendar: Calendar) {
+        if page != first { page = first }
     }
 
     /// The day the date picker opens on: today when today sits in the shown month, else the
-    /// first of it. The picker then always shows the month in the title that was tapped,
-    /// wherever the top row is.
+    /// first of it, so the picker shows the month in the title that was tapped.
     func goToDateStart(today: CivilDate, calendar: Calendar) -> CivilDate {
-        let shown = month(today: today, calendar: calendar)
-        if today.year == shown.year && today.month == shown.month {
-            return today
-        }
-        return CivilDate(year: shown.year, month: shown.month, day: 1)
+        let first = shown(today: today)
+        return MonthScroll.firstOfMonth(today) == first ? today : first
     }
 
     /// `November`, `January 2027` outside the current year, or always with the year for the
@@ -88,8 +73,40 @@ final class MonthScroll {
             alwaysYear: alwaysYear)
     }
 
+    // MARK: Month arithmetic
+
     /// The first day of the week holding `day`, where the locale starts weeks.
     static func weekStart(of day: CivilDate, calendar: Calendar) -> CivilDate {
         day.adding(days: -((day.weekday - calendar.firstWeekday + 7) % 7))
+    }
+
+    static func firstOfMonth(_ day: CivilDate) -> CivilDate {
+        CivilDate(year: day.year, month: day.month, day: 1)
+    }
+
+    /// The first day of the month `offset` months from the one starting on `first`.
+    static func month(_ first: CivilDate, offset: Int) -> CivilDate {
+        let index = first.year * 12 + (first.month - 1) + offset
+        return CivilDate(year: index / 12, month: index % 12 + 1, day: 1)
+    }
+
+    static func months(from a: CivilDate, to b: CivilDate) -> Int {
+        (b.year * 12 + b.month) - (a.year * 12 + a.month)
+    }
+
+    /// Every day of the month starting on `first`.
+    static func days(of first: CivilDate) -> ClosedRange<CivilDate> {
+        first...month(first, offset: 1).adding(days: -1)
+    }
+
+    /// The month's own week rows: four to six, the first holding its first day and the last
+    /// its last day. No trailing weeks of the next month.
+    static func weeks(of first: CivilDate, calendar: Calendar) -> [CivilDate] {
+        let days = days(of: first)
+        return Array(
+            stride(
+                from: weekStart(of: days.lowerBound, calendar: calendar),
+                through: days.upperBound,
+                by: 7))
     }
 }

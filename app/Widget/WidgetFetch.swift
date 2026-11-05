@@ -2,34 +2,39 @@ import DayCore
 import Foundation
 import Synchronization
 
-/// Stage two: the widget fetches for itself.
+/// Stage two: the widget reads Google itself, on every timeline reload.
 ///
-/// On a reload, when the snapshot is 15 minutes old or older, the extension fetches today
-/// through eight days ahead for every visible calendar with `SyncEngine`, writes the
-/// snapshot back (the newer `fetchedAt` wins against the app's own write) and builds the
-/// timeline from it. On any failure, or after 5 seconds, the old snapshot is what renders.
-/// The widget never writes the app's per-account event files.
+/// Each reload runs `SyncEngine.refreshWidgetSnapshot`: for every visible calendar, the
+/// changes since the app's sync token (or today through eight days ahead by window, when the
+/// token cannot serve those days), laid over the app's cached events in memory, then the
+/// snapshot written back with the newer `fetchedAt` winning. On any failure, or after
+/// `deadline`, the snapshot on disk is what renders. The widget never writes the app's event
+/// or sync files; the app reads the same changes again on its next refresh.
 ///
-/// It is off. `isEnabled` stays false until stage one has run on the device, because this is
-/// the one part that cannot be proven away from it: a Google client inside a WidgetKit
-/// extension, tokens read from a locked phone, two writers of one file, and a deadline that
-/// is a guess. Stage one (the app writes, the widget reads) is complete without it.
+/// Tokens come from the shared keychain at After First Unlock and the files from the App
+/// Group at the matching file protection, so a locked phone refreshes too. A snapshot under
+/// a minute old renders without reading Google: that is the reload the app asks for right
+/// after writing one.
+///
+/// The events and tokens come from the app's near file (a few days of events per account),
+/// not the five-month cache, so the work inside the deadline and the extension's memory
+/// ceiling stays small however long the app has run. The cost on a real phone is still to be
+/// measured; see `docs/SYNC.md`.
 enum WidgetFetch {
-    /// The flag. One line turns stage two on.
-    static let isEnabled = false
+    /// One line turns stage two off again, leaving the widget on what the app writes.
+    static let isEnabled = true
 
     /// How long a reload may spend on the network, keychain and file work together. Apple
-    /// publishes no limit for `getTimeline`, so this is a guess to validate with logging on
-    /// the device.
+    /// publishes no limit for `getTimeline`; five seconds has room for a token refresh and
+    /// one call per calendar, which run in parallel.
     static let deadline: Duration = .seconds(5)
 
-    /// The engine's own cutoff, shorter than `deadline`, so a fetch that runs long ends
+    /// The engine's own cutoff, shorter than `deadline`, so a read that runs long ends
     /// cleanly and keeps the snapshot on disk before the outer cutoff has to give up.
     static let engineDeadline: Duration = .milliseconds(4500)
 
     /// The snapshot to render after trying a refresh, or nil when the one on disk should
-    /// render as it is: no client, no account, the fetch failed or ran out of time. A fresh
-    /// snapshot (under 15 minutes) comes back without a fetch.
+    /// render as it is: no client, no account, the read failed or ran out of time.
     static func refresh() async -> WidgetSnapshot? {
         await Deadline.run(within: deadline) {
             guard let auth = GoogleAuth(), let cache = try? CacheDirectory.shared() else {

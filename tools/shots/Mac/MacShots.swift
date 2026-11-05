@@ -62,6 +62,7 @@ final class Shots {
         for look in Look.allCases {
             NSApp.appearance = look.appearance
             await window(look)
+            await narrowWindow(look)
             await firstRun(look)
             await menuBar(look)
             await settings(look)
@@ -98,15 +99,18 @@ final class Shots {
         if let call = store.dayEvents(store.today).first(where: { $0.title == "Investor call" }) {
             state.selectedEvent = call.id
             await settle(1.2)
+            let symbols = Self.symbols(for: store)
             let popover = host(
-                EventPopover(event: call).calendarStore(store)
+                EventPopover(event: call).calendarStore(store).calendarSymbols(symbols)
                     .background(Color(nsColor: .windowBackgroundColor)),
-                size: NSHostingView(rootView: EventPopover(event: call).calendarStore(store)).fittingSize,
+                size: NSHostingView(
+                    rootView: EventPopover(event: call).calendarStore(store).calendarSymbols(symbols)
+                ).fittingSize,
                 look: look, chrome: false)
             await settle(1)
             await save(
                 window, as: "popover-\(look)",
-                "Event popover for Investor call, beside its row in the day pane (\(look))",
+                "Event popover for Investor call, beside its row in the day pane, each calendar with its symbol (\(look))",
                 pane: pane, beside: popover)
             close(popover)
             state.selectedEvent = nil
@@ -124,7 +128,47 @@ final class Shots {
         await save(
             window, as: "window-berlin-\(look)",
             "Window with 23 November selected: Berlin, day 1 of 3 (\(look))", pane: pane)
+
+        state.goTo(CivilDate(year: 2026, month: 12, day: 1))
+        window.title = state.title
+        await settle(1.5)
+        await save(
+            window, as: "window-december-\(look)",
+            "December with 1 December selected: Copenhagen continues from November, day 4 of 5 (\(look))",
+            pane: pane)
         close(window)
+    }
+
+    /// The window near its smallest, where the Month keeps about 60 pt a day beside the pane.
+    private func narrowWindow(_ look: Look) async {
+        let store = Self.store(at: "12:10")
+        let state = MacState(store: store)
+        let window = host(
+            MainWindow(state: state, login: OpenAtLogin()).calendarStore(store)
+                .calendarSymbols(Self.symbols(for: store)),
+            size: CGSize(width: 760, height: 520), look: look, chrome: true)
+        window.title = state.title
+        await settle(2.5)
+        let pane = { () -> AnyView in
+            AnyView(
+                DayView(day: state.day, selection: .constant(nil), presented: .constant(nil))
+                    .calendarStore(store))
+        }
+        await save(
+            window, as: "window-narrow-\(look)",
+            "Window at 760 by 520, near the 720 by 480 minimum (\(look))", pane: pane)
+        close(window)
+    }
+
+    /// Symbols on both accounts' main calendars, as the person would choose them: Home on
+    /// Personal, Work on you@acme.com. In memory, so nothing is written to this Mac.
+    private static func symbols(for store: FixtureStore) -> CalendarSymbols {
+        var chosen: [CalendarID: CalendarSymbol] = [:]
+        for info in store.calendars {
+            if info.id.googleID == "you@gmail.com" { chosen[info.id] = CalendarSymbol.named("house") }
+            if info.id.googleID == "you@acme.com" { chosen[info.id] = CalendarSymbol.named("briefcase") }
+        }
+        return CalendarSymbols(chosen)
     }
 
     private func firstRun(_ look: Look) async {
@@ -191,7 +235,8 @@ final class Shots {
         tabs.tabStyle = .toolbar
         let accounts = NSTabViewItem(
             viewController: NSHostingController(
-                rootView: AccountsView().frame(width: 520, height: 480).calendarStore(store)))
+                rootView: AccountsView().frame(width: 520, height: 480).calendarStore(store)
+                    .calendarSymbols(Self.symbols(for: store))))
         accounts.label = "Accounts"
         accounts.image = NSImage(systemSymbolName: "person.crop.circle", accessibilityDescription: nil)
         let general = NSTabViewItem(
@@ -211,7 +256,9 @@ final class Shots {
         await settle(1.2)
         window.toolbar?.selectedItemIdentifier = nil
         await settle(0.5)
-        await save(window, as: "settings-accounts-\(look)", "Settings, Accounts (\(look))")
+        await save(
+            window, as: "settings-accounts-\(look)",
+            "Settings, Accounts: Personal wears Home, you@acme.com wears Work (\(look))")
         tabs.selectedTabViewItemIndex = 1
         window.title = "General"
         await settle(1.2)

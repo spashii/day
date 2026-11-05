@@ -4,7 +4,7 @@ import Observation
 import SwiftUI
 
 /// What the Mac window, its menus and the menu bar panel share: the selected day, the month's
-/// scroll, the day pane and the selected event. One object, because a menu command, a toolbar
+/// page, the day pane and the selected event. One object, because a menu command, a toolbar
 /// button and a click on a menu bar row must all move the same selection.
 ///
 /// It holds no events of its own; every answer is asked of the store and the rules, so the
@@ -61,17 +61,17 @@ final class MacState {
         show(day)
     }
 
-    /// An arrow key: the day moves by one or by a week, and the month scrolls only when the
-    /// day would otherwise leave the screen.
+    /// An arrow key: the day moves by one or by a week, and the page turns when the day
+    /// moves into another month.
     func move(days: Int) {
         let target = day.adding(days: days)
         select(target)
         keepOnScreen(target)
     }
 
-    /// Previous and next month, Command-Left and Command-Right. The month scrolls to put its
-    /// first week on top and the selection follows to the same day of the month, so the pane
-    /// and the title never name different months.
+    /// Previous and next month, Command-Left and Command-Right. The page turns and the
+    /// selection follows to the same day of the month, so the pane and the title never name
+    /// different months.
     func moveMonth(by months: Int) {
         let calendar = store.calendar
         let shown = scroll.month(today: store.today, calendar: calendar)
@@ -84,21 +84,6 @@ final class MacState {
         select(CivilDate(year: year, month: month, day: min(day.day, length)))
     }
 
-    /// The month opens on the current week, but scrolling there before the rows above it have
-    /// been measured lands the week a row too high, with its numerals under the toolbar. One
-    /// step away and back, once the first frame exists, puts it where it belongs. A person
-    /// who has already scrolled or picked a day keeps their place.
-    func settleScroll() async {
-        let today = store.today
-        let calendar = store.calendar
-        try? await Task.sleep(for: .milliseconds(250))
-        let current = MonthScroll.weekStart(of: today, calendar: calendar)
-        guard chosenDay == nil, scroll.topWeek == nil || scroll.topWeek == current else { return }
-        scroll.show(today.adding(days: -7), today: today, calendar: calendar)
-        try? await Task.sleep(for: .milliseconds(100))
-        scroll.show(today, today: today, calendar: calendar)
-    }
-
     /// The month's title for the window toolbar: `November 2026`.
     var title: String {
         scroll.title(today: store.today, now: store.now, calendar: store.calendar, alwaysYear: true)
@@ -108,17 +93,11 @@ final class MacState {
         scroll.show(day, today: store.today, calendar: store.calendar)
     }
 
-    /// Scrolls only if `day`'s week is off screen: to the top when it is above, to the bottom
-    /// row when it is below. Before the grid has reported its rows there is nothing to do.
+    /// Turns the page to `day`'s month when it shows another: a page draws only its own
+    /// month's days, so the selected day is always on the page of its month.
     private func keepOnScreen(_ day: CivilDate) {
-        let week = MonthScroll.weekStart(of: day, calendar: store.calendar)
-        let visible = scroll.visibleWeeks
-        guard let first = visible.first, let last = visible.last else { return }
-        if week < first {
-            show(week)
-        } else if week > last {
-            show(week.adding(days: -7 * (visible.count - 1)))
-        }
+        guard MonthScroll.firstOfMonth(day) != scroll.shown(today: store.today) else { return }
+        show(day)
     }
 
     // MARK: Events in the day pane
@@ -218,9 +197,7 @@ final class MacState {
         let wasOpen = windowIsOpen
         select(target)
         showsDayPane = true
-        if !scroll.visibleWeeks.contains(MonthScroll.weekStart(of: target, calendar: calendar)) {
-            show(target)
-        }
+        keepOnScreen(target)
         selectedEvent = event.id
         openWindow()
         Task {

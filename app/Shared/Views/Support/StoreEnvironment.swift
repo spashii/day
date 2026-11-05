@@ -67,6 +67,30 @@ extension EnvironmentValues {
     }
 }
 
+/// What a tap on an event row does on the iPhone: the root shows the event sheet, so the app
+/// shows one sheet at a time and a widget link replaces whichever sheet is open. `zoom` is
+/// the row's namespace, so the sheet still grows out of the row it came from. Without one, as
+/// in previews, the list presents the sheet itself.
+struct PresentEventAction {
+    let handler: @MainActor (Event, Namespace.ID) -> Void
+
+    @MainActor
+    func callAsFunction(_ event: Event, zoom: Namespace.ID) {
+        handler(event, zoom)
+    }
+}
+
+private struct PresentEventKey: EnvironmentKey {
+    static var defaultValue: PresentEventAction? { nil }
+}
+
+extension EnvironmentValues {
+    var presentEvent: PresentEventAction? {
+        get { self[PresentEventKey.self] }
+        set { self[PresentEventKey.self] = newValue }
+    }
+}
+
 /// The spacing scale from the brief: 4 inside a row, 8 between a cell's elements, 16 between
 /// the summary and the list, 24 above section breaks. Nothing else is used.
 enum Spacing {

@@ -14,9 +14,10 @@ struct DayView: View {
     var presented: Binding<EventID?>? = nil
 
     var body: some View {
+        // The system's automatic scroll edge: a plain list under a title bar is not the
+        // pinned-header case the hard edge is for.
         DayList(day: day, showsHeader: true, selection: selection, presented: presented)
-        .refreshable { await store.refresh() }
-        .scrollEdgeEffectStyle(.hard, for: .top)
+            .refreshable { await store.refresh() }
     }
 }
 

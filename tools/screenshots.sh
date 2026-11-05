@@ -1,6 +1,6 @@
 #!/bin/zsh
 # Pictures of every screen the brief lists, all on the invented fixture:
-#   tools/screenshots.sh [NAME] [iphone] [lock] [widget] [mac]
+#   tools/screenshots.sh [NAME] [iphone] [access] [lock] [widget] [mac] [icon]
 #
 # From Linux it syncs the checkout to ~/build/NAME on the Mac (tools/sync.sh, NAME defaults
 # to "day"), runs itself there, and copies the pictures with their index.html into
@@ -9,6 +9,9 @@
 # On the Mac it builds into build/dd (DAY_DERIVED overrides), then:
 # - iphone: the app in its own simulator (DAY_SIM, default "day-shots", an iPhone 17 on iOS
 #   27.2), on FixtureStore with a fixed clock (-Now), driven by AXe, light and dark.
+# - access: the same app at the largest accessibility text size and with Increase Contrast.
+#   The simulator has no switch for Reduce Transparency or the glass slider, so those are
+#   not pictured.
 # - lock: the three "Next" families added through the Lock Screen's own widget gallery, awake
 #   and in Always-On. The widget runs on the real clock with the bundled invented week, so
 #   its text is whatever that week says at this hour in Amsterdam.
@@ -18,17 +21,19 @@
 #   by tools/shots into windows placed off every screen, so nothing appears on the desktop.
 #   Glass is drawn by the window server and is missing from these pictures; the day pane
 #   inside it is drawn again on a flat ground.
+# - icon: the app icon in its six appearances, rendered by Icon Composer's ictool.
 #
 # Nothing here signs with a real identity, uploads or touches Google.
 set -euo pipefail
 trap 'print -u2 "screenshots.sh: stopped at line $LINENO"' ZERR
 root=${0:A:h:h}
 name=day
-if [[ ${1:-} != (iphone|lock|widget|mac) && -n ${1:-} ]]; then
+if [[ ${1:-} != (iphone|access|lock|widget|mac|icon) && -n ${1:-} ]]; then
   name=$1
   shift
 fi
-parts=(${@:-iphone lock widget mac})
+parts=(iphone access lock widget mac icon)
+(( $# )) && parts=("$@")
 
 if [[ $(uname) != Darwin ]]; then
   host=${DAY_MAC:-mac-air}
@@ -65,7 +70,7 @@ build() {
   if (( ${parts[(I)widget]} || ${parts[(I)mac]} )); then
     (cd tools/shots && xcodegen generate --quiet)
   fi
-  if (( ${parts[(I)iphone]} || ${parts[(I)lock]} )); then
+  if (( ${parts[(I)iphone]} || ${parts[(I)access]} || ${parts[(I)lock]} )); then
     # Signed to run locally, which is what carries the App Group into the simulator; with
     # CODE_SIGNING_ALLOWED=NO the widget could not read what the app writes.
     xcodebuild -project app/Day.xcodeproj -scheme DayPhone -configuration Debug \
@@ -206,23 +211,91 @@ iphone_pass() {
 
   launch 12:10
   tap_where '.AXUniqueId == "BackButton"'
-  snap $p-month.png "Month, opened on the current week ($look)"
-  # Slow enough not to fling: two week rows, so the title moves to the month with most days.
-  axe swipe --start-x 201 --start-y 600 --end-x 201 --end-y 400 --duration 1.5 --udid $sim >/dev/null
+  snap $p-month.png "Month: November with today selected and listed under the grid; Copenhagen runs past the month's last day ($look)"
+  tap_prefix "Monday 23 November"
+  snap $p-month-selected.png "Month with Monday 23 November selected: the gray ring, and Berlin's day listed under the grid ($look)"
+  # Sideways, as the pages turn; slow enough to land on the next page rather than fling.
+  axe swipe --start-x 360 --start-y 300 --end-x 40 --end-y 300 --duration 0.6 --udid $sim >/dev/null
   sleep 2
-  snap $p-month-later.png "Month two rows on: the title follows the month holding most visible days; Berlin and Sinterklaas bars, 1 Dec ($look)"
+  snap $p-month-december.png "December, one swipe on: Copenhagen continues from November with a square start, Sinterklaas on the 5th ($look)"
   launch 12:10
   tap_where '.AXUniqueId == "BackButton"'
-  tap_where '(.AXLabel // "") == "November" and .type == "Button"'
-  snap $p-go-to-date.png "Go to Date, from a tap on the month title ($look)"
+  tap_label "Go to Date…"
+  snap $p-go-to-date.png "Go to Date, from the calendar button in the bottom bar ($look)"
   launch 12:10
   tap_where '.AXUniqueId == "BackButton"'
   tap_label Calendars
-  snap $p-calendars.png "Calendars sheet: accounts and visibility ($look)"
+  snap $p-calendars.png "Calendars sheet: accounts and visibility, every calendar on its color dot ($look)"
+  # Symbols last, so every picture above shows the default dots. Choosing writes the
+  # symbols file in the App Group, as on a phone.
+  tap_where '(.AXLabel // "") == "Personal" and (.AXValue // "") == "No symbol"'
+  snap $p-symbol-picker.png "Tapping a calendar's name opens its symbol grid, in the calendar's color, with None ($look)"
+  tap_label Home
+  tap_where '(.AXLabel // "") == "you@acme.com" and (.AXValue // "") == "No symbol"'
+  tap_label Work
+  snap $p-calendars-symbols.png "Calendars with symbols chosen: Personal wears Home, you@acme.com wears Work ($look)"
+  launch 12:10
+  tap_prefix "Investor call,"
+  snap $p-event-sheet-symbols.png "Event sheet for Investor call, on both accounts: each calendar's symbol in its color ($look)"
+  clear_symbols
+}
+
+# Larger text, Increase Contrast and the Join target, mostly light: the checks Liquid Glass
+# and accessibility ask for beyond the two appearances.
+access() {
+  [[ -n $sim ]] || boot_simulator
+  local p=iphone-light
+  xcrun simctl ui $sim appearance light
+  xcrun simctl ui $sim content_size accessibility-extra-extra-extra-large
+  launch 12:10
+  snap $p-ax5-day.png "Day at the largest accessibility text size: the summary first (light)"
+  scroll_up
+  snap $p-ax5-day-rows.png "Day at the largest accessibility text size, scrolled to the rows: times above titles, titles wrap. The large title does not collapse, so rows pass under it (light)"
+  launch 12:10
+  tap_where '.AXUniqueId == "BackButton"'
+  snap $p-ax5-month.png "Month at the largest accessibility text size: the grid stops at xxxLarge, the day under it grows (light)"
+  launch 13:55
+  scroll_up
+  snap $p-ax5-day-1355-join.png "Day at 13:55, largest text: Join under its row (light)"
+  xcrun simctl ui $sim content_size large
+  xcrun simctl ui $sim increase_contrast enabled
+  launch 12:10
+  tap_where '.AXUniqueId == "BackButton"'
+  snap $p-contrast-month.png "Month with Increase Contrast (light)"
+  launch 13:55
+  snap $p-contrast-day-1355.png "Day at 13:55 with Increase Contrast: Join at the regular size (light)"
+  xcrun simctl ui $sim increase_contrast disabled
+  xcrun simctl ui $sim appearance dark
+  xcrun simctl ui $sim increase_contrast enabled
+  launch 12:10
+  tap_where '.AXUniqueId == "BackButton"'
+  snap iphone-dark-contrast-month.png "Month with Increase Contrast (dark)"
+  xcrun simctl ui $sim increase_contrast disabled
+  xcrun simctl ui $sim appearance light
+}
+
+# The symbols file the app and the widget share. Removed before and after the picture runs,
+# so the default (no symbols) is what every other picture shows.
+symbols_file() {
+  local group=$(xcrun simctl get_app_container $sim $bundle group.io.github.spashii.day 2>/dev/null || true)
+  [[ -n $group ]] && print -r -- "$group/Library/Application Support/Day/calendar-symbols.json"
+}
+
+clear_symbols() {
+  local file=$(symbols_file)
+  [[ -n $file ]] && rm -f "$file"
+  return 0
+}
+
+# Two thirds of a screen up, slowly, so the list scrolls instead of flinging.
+scroll_up() {
+  axe swipe --start-x 200 --start-y 700 --end-x 200 --end-y 200 --duration 1 --udid $sim >/dev/null
+  sleep 1.5
 }
 
 iphone() {
   boot_simulator
+  clear_symbols
   iphone_pass light
   iphone_pass dark
   xcrun simctl terminate $sim $bundle 2>/dev/null || true
@@ -247,7 +320,11 @@ add_lock_widgets() {
   tap_where '(.AXLabel // "") == "Day, Next" and (.AXValue // "") == "Widget, Rectangular"' 2
   tap_where '(.AXLabel // "") == "Day, Next" and (.AXValue // "") == "Widget, Circular"' 2
   tap_label close 2.5
+  # The line above the clock opens its own gallery; a tap that lands while the first
+  # gallery is still closing does nothing, so it is tried once more.
   tap_where '(.AXLabel // "") | endswith(", Top Widget")' 3
+  [[ -n $(find_element '(.AXLabel // "") == "Day, Next, Top Widget"') ]] ||
+    tap_where '(.AXLabel // "") | endswith(", Top Widget")' 3
   tap_label "Day, Next, Top Widget" 2
   axe swipe --start-x 200 --start-y 392 --end-x 200 --end-y 860 --duration 0.4 --udid $sim >/dev/null
   sleep 2
@@ -263,6 +340,20 @@ lock() {
   # The widget falls back to the bundled week only while the app has written no snapshot.
   local group=$(xcrun simctl get_app_container $sim $bundle group.io.github.spashii.day 2>/dev/null || true)
   [[ -n $group ]] && rm -f "$group/Library/Application Support/Day/widget-snapshot.json"
+  xcrun simctl terminate $sim $bundle 2>/dev/null || true
+  # Both accounts' main calendars wear a symbol, so whichever event is next names its
+  # calendar: Home on Personal, Work on you@acme.com. Chosen through the app's own picker,
+  # because choosing is what asks WidgetKit to reload; a file written from outside would
+  # wait for the widget's next scheduled reload.
+  xcrun simctl ui $sim appearance light
+  clear_symbols
+  launch 12:10
+  tap_where '.AXUniqueId == "BackButton"'
+  tap_label Calendars
+  tap_where '(.AXLabel // "") == "Personal" and (.AXValue // "") == "No symbol"'
+  tap_label Home
+  tap_where '(.AXLabel // "") == "you@acme.com" and (.AXValue // "") == "No symbol"'
+  tap_label Work
   xcrun simctl terminate $sim $bundle 2>/dev/null || true
   xcrun simctl ui $sim appearance light
   add_lock_widgets
@@ -282,9 +373,10 @@ lock() {
     snap lock-aod-$look.png "Always-On: line 3 gone and line 2 in clock times; $amsterdam in Amsterdam ($look)" lock
     axe button lock --udid $sim >/dev/null
     sleep 4
-    snap lock-$look.png "Lock Screen with the inline, rectangular and circular Next; $amsterdam in Amsterdam ($look)" lock
+    snap lock-$look.png "Lock Screen: the next event's calendar symbol leads the inline line and tops the circular time; $amsterdam in Amsterdam ($look)" lock
   done
   xcrun simctl ui $sim appearance light
+  clear_symbols
 }
 
 # MARK: Widget views
@@ -329,6 +421,28 @@ mac() {
   done < $shots/mac/done.txt
 }
 
+# MARK: Icon
+
+icon() {
+  local ictool=$(xcode-select -p)/../Applications/Icon\ Composer.app/Contents/Executables/ictool
+  rm -rf $shots/icon
+  mkdir -p $shots/icon
+  local -A words=(
+    Default "Default: the system's light ground, the blue bar in glass"
+    Dark "Dark: the system's dark ground, lighter dots"
+    ClearLight "Clear, light: white bar, gray dots"
+    ClearDark "Clear, dark"
+    TintedLight "Tinted, light: the bar white, the dots lighter and fainter"
+    TintedDark "Tinted, dark"
+  )
+  local rendition
+  for rendition in Default Dark ClearLight ClearDark TintedLight TintedDark; do
+    "$ictool" app/AppIcon.icon --export-image --output-file $shots/icon/$rendition.png \
+      --platform iOS --rendition $rendition --width 256 --height 256 --scale 2 >/dev/null
+    record icon icon/$rendition.png $words[$rendition]
+  done
+}
+
 # MARK: Index
 
 # Only pictures the manifest names are kept, so a renamed or dropped shot does not linger in
@@ -357,24 +471,60 @@ index() {
     print '</style></head><body>'
     print "<h1>Day: every screen, on the invented fixture</h1>"
     print "<p>Built $(date '+%Y-%m-%d %H:%M') from the working tree. iPhone 17 simulator, iOS 27.2; Mac app views from tools/shots. All events, people and accounts are invented.</p>"
+    # What changed this round leads, light beside dark; the sections below hold the rest.
+    local -a lead=(
+      iphone-light-month.png iphone-dark-month.png
+      iphone-light-month-selected.png iphone-dark-month-selected.png
+      iphone-light-month-december.png iphone-dark-month-december.png
+      iphone-light-symbol-picker.png iphone-dark-symbol-picker.png
+      iphone-light-calendars-symbols.png iphone-dark-calendars-symbols.png
+      iphone-light-event-sheet-symbols.png iphone-dark-event-sheet-symbols.png
+      lock-light.png lock-dark.png
+      iphone-light-go-to-date.png iphone-dark-go-to-date.png
+      mac/window-light.png mac/window-dark.png
+      mac/window-december-light.png mac/window-december-dark.png
+      mac/window-narrow-light.png mac/window-narrow-dark.png
+      mac/settings-accounts-light.png mac/popover-light.png
+      widget/symbol-1210.png
+      iphone-light-ax5-day-rows.png iphone-light-ax5-month.png iphone-light-ax5-day-1355-join.png
+      iphone-light-contrast-month.png iphone-dark-contrast-month.png iphone-light-contrast-day-1355.png
+      icon/Default.png icon/Dark.png icon/ClearLight.png icon/ClearDark.png icon/TintedLight.png icon/TintedDark.png
+    )
+    print "<h2>New this round</h2><p>The month as one page per month with the selected day under it, calendar symbols, the system title bar and Go to Date button, the larger-text layout, and the icon with Liquid Glass on.</p><div class=\"grid\">"
+    local file line caption
+    for file in $lead; do
+      line=$(grep -F "	$file	" $manifest | head -1)
+      [[ -n $line ]] || continue
+      caption=${line##*	}
+      local leadClass=
+      [[ $file == (mac|widget)/* ]] && leadClass=' class="wide"'
+      print "<figure$leadClass><a href=\"$file\"><img src=\"$file\" alt=\"${caption//\"/&quot;}\" loading=\"lazy\"></a><figcaption>$caption</figcaption></figure>"
+    done
+    print '</div>'
     local -A titles=(
       iphone "iPhone app"
       lock "Lock Screen, through the widget gallery"
       widget "Lock Screen widget views, the golden table and every state"
       mac "Mac"
+      icon "App icon"
     )
     local -A notes=(
       iphone "FixtureStore with -Now on Wednesday 4 November 2026 in Amsterdam; the status bar shows the same clock."
       lock "Added through the Lock Screen editor's own gallery and drawn by the system in its vibrant mode. The widget reads the real clock and the bundled invented week, moved so its Wednesday is today, in Amsterdam time; the clock above it is the Mac's own zone. Always-On is the dimmed state the side button leaves the simulator in."
       widget "Drawn by the widget's own views (NextViews.swift) from widgetTimeline, at the six times of the brief's table and in each state, on a dark ground. Only the Lock Screen draws the vibrant rendering, so these are the text and layout, not the final pixels."
-      mac "Drawn by the app's own views in tools/shots, in windows placed off every screen. Glass (the inspector's floating pane, the menu bar panel's material) is drawn by the window server and does not appear here."
+      mac "Drawn by the app's own views in tools/shots, in windows placed off every screen. Glass (the inspector's floating pane, the menu bar panel's material) is drawn by the window server and does not appear here; a capture of the real window needs an unlocked session."
+      icon "Rendered from app/AppIcon.icon by Icon Composer's ictool, iOS, in each appearance the system can ask for."
     )
-    for part in iphone lock widget mac; do
-      grep -q "^$part	" $manifest 2>/dev/null || continue
+    for part in iphone lock widget mac icon; do
+      # A part whose pictures all lead has no section of its own.
+      local -a rest=(${(f)"$(grep "^$part	" $manifest 2>/dev/null | cut -f2)"})
+      rest=(${rest:|lead})
+      (( $#rest )) || continue
       print "<h2>$titles[$part]</h2><p>$notes[$part]</p><div class=\"grid\">"
       local class=
       [[ $part == (mac|widget) ]] && class=' class="wide"'
       grep "^$part	" $manifest | while IFS=$'\t' read -r _ file caption; do
+        (( ${lead[(Ie)$file]} )) && continue
         print "<figure$class><a href=\"$file\"><img src=\"$file\" alt=\"${caption//\"/&quot;}\" loading=\"lazy\"></a><figcaption>$caption</figcaption></figure>"
       done
       print '</div>'

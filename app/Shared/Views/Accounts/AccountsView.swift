@@ -4,9 +4,11 @@ import SwiftUI
 
 /// Accounts and calendar visibility: one list for first run, the iPhone Calendars sheet and
 /// the Mac Accounts tab. Accounts by address in the order added, calendars named exactly as
-/// in Google with a toggle, the add button, and the two lines that say what Day keeps.
+/// in Google with a toggle and an optional symbol, the add button, and the two lines that say
+/// what Day keeps.
 struct AccountsView: View {
     @EnvironmentStore private var store
+    @EnvironmentSymbols private var symbols
     @Environment(\.webAuthenticationSession) private var session
 
     /// `Add Google Account…`, or `Add Another Account…` in the first-run flow.
@@ -28,7 +30,7 @@ struct AccountsView: View {
                         .disabled(busy)
                     } else {
                         ForEach(store.calendars(of: account.id)) { info in
-                            calendarRow(info)
+                            CalendarRow(info: info)
                         }
                     }
                 }
@@ -58,7 +60,10 @@ struct AccountsView: View {
             presenting: removing
         ) { account in
             Button("Remove", role: .destructive) {
-                withAnimation { store.removeAccount(account.id) }
+                withAnimation {
+                    store.removeAccount(account.id)
+                    symbols.forget(account: account.id)
+                }
             }
         } message: { _ in
             Text("Its calendars disappear from Day. Nothing changes in Google.")
@@ -88,24 +93,6 @@ struct AccountsView: View {
         #endif
     }
 
-    /// `● Personal` with its toggle. The mark is the calendar's color as Google resolves it;
-    /// there is no color picker, because the color is changed in Google.
-    private func calendarRow(_ info: CalendarInfo) -> some View {
-        Toggle(
-            isOn: Binding(
-                get: { store.isVisible(info.id) },
-                set: { store.setVisible($0, calendar: info.id) })
-        ) {
-            HStack(spacing: Spacing.cell) {
-                Circle()
-                    .fill(info.markColor)
-                    .frame(width: 10, height: 10)
-                Text(verbatim: info.name)
-                    .lineLimit(1)
-            }
-        }
-    }
-
     private var privacy: LocalizedStringKey {
         #if os(macOS)
             "Day reads your calendars from Google and keeps them on this device. It collects nothing. It also checks for updates."
@@ -123,7 +110,161 @@ struct AccountsView: View {
     }
 }
 
-/// The iPhone Calendars sheet, from the Month's bottom toolbar or `Choose Calendars…`.
+/// `● Personal` with its toggle. The mark is the calendar's symbol when it has one, else its
+/// color as Google resolves it, always in that color; the color itself has no picker, because
+/// it is changed in Google. Tapping the name opens the symbol grid, tapping the switch
+/// shows or hides the calendar.
+private struct CalendarRow: View {
+    @EnvironmentStore private var store
+    @EnvironmentSymbols private var symbols
+
+    let info: CalendarInfo
+
+    @State private var choosing = false
+
+    var body: some View {
+        let symbol = symbols.symbol(for: info.id)
+        HStack(spacing: Spacing.cell) {
+            Button {
+                choosing = true
+            } label: {
+                HStack(spacing: Spacing.cell) {
+                    CalendarMark(symbol: symbol, color: info.markColor, dot: 10)
+                        .frame(width: 20)
+                    Text(verbatim: info.name)
+                        .lineLimit(1)
+                    Spacer(minLength: 0)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityValue(Text(verbatim: symbol?.label ?? "No symbol"))
+            .accessibilityHint("Choose a symbol")
+            .popover(isPresented: $choosing) {
+                CalendarSymbolGrid(selection: symbol, tint: info.markColor) { chosen in
+                    symbols.set(chosen, for: info.id)
+                    choosing = false
+                }
+                // A compact popover on the iPhone, where a popover would otherwise become a
+                // sheet.
+                .presentationCompactAdaptation(.popover)
+            }
+
+            Toggle(
+                isOn: Binding(
+                    get: { store.isVisible(info.id) },
+                    set: { store.setVisible($0, calendar: info.id) })
+            ) {
+                Text(verbatim: info.name)
+            }
+            .labelsHidden()
+        }
+    }
+}
+
+/// The mark beside a calendar's name: its symbol in the calendar's color, or the color's dot
+/// when it has no symbol or this system cannot draw it. Monochrome, at the size of the text
+/// beside it, and in the content layer only. Decoration: the name beside it is what VoiceOver
+/// reads, and the list row also reads the symbol's name as its value.
+struct CalendarMark: View {
+    let symbol: CalendarSymbol?
+    let color: Color
+    /// The dot's diameter, which differs between the list and the event sheet.
+    let dot: CGFloat
+
+    var body: some View {
+        if let symbol, symbol.isDrawable {
+            Image(systemName: symbol.name)
+                .symbolRenderingMode(.monochrome)
+                .imageScale(.small)
+                .foregroundStyle(color)
+                .accessibilityHidden(true)
+        } else {
+            Circle()
+                .fill(color)
+                .frame(width: dot, height: dot)
+                .accessibilityHidden(true)
+        }
+    }
+}
+
+/// The symbols a calendar can wear, in the calendar's color, as one compact grid in a
+/// popover, and `None` to go back to the color dot. Choosing one closes the popover.
+struct CalendarSymbolGrid: View {
+    let selection: CalendarSymbol?
+    let tint: Color
+    let choose: (CalendarSymbol?) -> Void
+
+    #if os(iOS)
+        private let cell: CGFloat = 44
+    #else
+        private let cell: CGFloat = 32
+    #endif
+
+    /// Six to a row, so the thirty symbols are five full rows.
+    private static let columns = 6
+
+    var body: some View {
+        VStack(spacing: Spacing.cell) {
+            Grid(horizontalSpacing: Spacing.row, verticalSpacing: Spacing.row) {
+                ForEach(rows.indices, id: \.self) { row in
+                    GridRow {
+                        ForEach(rows[row]) { symbol in
+                            symbolButton(symbol)
+                        }
+                    }
+                }
+            }
+            Button {
+                choose(nil)
+            } label: {
+                HStack(spacing: Spacing.row) {
+                    Text("None")
+                    if selection == nil {
+                        Image(systemName: "checkmark")
+                            .accessibilityHidden(true)
+                    }
+                }
+            }
+            .buttonStyle(.borderless)
+            .accessibilityAddTraits(selection == nil ? .isSelected : [])
+        }
+        .padding(Spacing.block)
+    }
+
+    /// Only what this system draws, so the grid never offers an empty cell.
+    private var rows: [[CalendarSymbol]] {
+        let symbols = CalendarSymbol.all.filter(\.isDrawable)
+        return stride(from: 0, to: symbols.count, by: Self.columns).map {
+            Array(symbols[$0..<min($0 + Self.columns, symbols.count)])
+        }
+    }
+
+    private func symbolButton(_ symbol: CalendarSymbol) -> some View {
+        let selected = symbol == selection
+        return Button {
+            choose(symbol)
+        } label: {
+            Image(systemName: symbol.name)
+                .font(.title3)
+                .foregroundStyle(tint)
+                .frame(width: cell, height: cell)
+                .background {
+                    if selected {
+                        Circle().fill(Color.accentColor.opacity(0.2))
+                    }
+                }
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(verbatim: symbol.label))
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+}
+
+/// The iPhone Calendars sheet, from the Month's bottom toolbar or `Choose Calendars…`. Every
+/// switch and symbol applies as it is changed, so there is nothing to confirm: the sheet has
+/// the system's close button, not Done.
 struct CalendarsSheet: View {
     @Environment(\.dismiss) private var dismiss
 
@@ -135,8 +276,8 @@ struct CalendarsSheet: View {
                     .navigationBarTitleDisplayMode(.inline)
                 #endif
                 .toolbar {
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Done") { dismiss() }
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button(role: .close) { dismiss() }
                     }
                 }
         }
@@ -147,6 +288,22 @@ struct CalendarsSheet: View {
     let store = PreviewStore.make()
     CalendarsSheet()
         .calendarStore(store)
+}
+
+#Preview("Calendars, with symbols") {
+    let store = PreviewStore.make()
+    let symbols = CalendarSymbols(
+        Dictionary(
+            uniqueKeysWithValues: store.calendars.prefix(3).enumerated().map { index, info in
+                (info.id, CalendarSymbol.all[[0, 5, 28][index]])
+            }))
+    CalendarsSheet()
+        .calendarStore(store)
+        .calendarSymbols(symbols)
+}
+
+#Preview("Symbol grid") {
+    CalendarSymbolGrid(selection: CalendarSymbol.named("briefcase"), tint: .blue) { _ in }
 }
 
 #Preview("Calendars, signed out") {

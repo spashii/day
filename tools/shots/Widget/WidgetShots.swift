@@ -38,6 +38,8 @@ enum WidgetShots {
         var signedOut = 0
         var accounts: Int? = nil
         var events: [Event]? = nil
+        /// The next event's calendar symbol, as the provider attaches it.
+        var symbol: NextSymbol? = nil
     }
 
     static func run() async {
@@ -54,6 +56,10 @@ enum WidgetShots {
                     caption: "\(clock), the brief's Lock Screen table", clock: clock))
         }
         rows += [
+            Row(
+                file: "symbol-1210.png",
+                caption: "12:10 with a symbol on the next event's calendar (Work)", clock: "12:10",
+                symbol: NextSymbol(name: "briefcase", label: "Work")),
             Row(file: "state-no-account.png", caption: "No account", clock: "12:10", accounts: 0),
             Row(file: "state-nothing-ahead.png", caption: "Nothing in the next 7 days", clock: "12:10", events: []),
             Row(file: "state-signed-out.png", caption: "One account signed out, at 12:10", clock: "12:10", signedOut: 1),
@@ -64,7 +70,7 @@ enum WidgetShots {
         var done: [String] = []
         for row in rows {
             let content = entry(for: row)
-            let image = render(WidgetRow(entry: content))
+            let image = render(WidgetRow(entry: content, symbol: row.symbol))
             if let png = image?.pngData() {
                 try? png.write(to: url.appending(path: row.file), options: .atomic)
                 done.append("\(row.file)\t\(row.caption): \(content.inline)")
@@ -144,11 +150,14 @@ enum WidgetShots {
 /// under Always-On, side by side with their names under them.
 private struct WidgetRow: View {
     let entry: WidgetEntry
+    var symbol: NextSymbol? = nil
 
     var body: some View {
         HStack(alignment: .top, spacing: 24) {
             slot("Inline") {
-                NextInlineView(text: entry.inline, showsEvent: entry.showsEvent)
+                NextInlineView(
+                    text: entry.inline, showsEvent: entry.showsEvent,
+                    symbol: entry.showsEvent ? symbol : nil)
                     .lineLimit(1)
                     .frame(width: 234, height: 26, alignment: .leading)
             }
@@ -157,7 +166,7 @@ private struct WidgetRow: View {
                     .frame(width: 160, height: 72, alignment: .topLeading)
             }
             slot("Circular") {
-                NextCircularView(content: entry.circular)
+                NextCircularView(content: entry.circular, symbol: entry.circular.isTime ? symbol : nil)
                     .frame(width: 72, height: 72)
             }
             slot("Rectangular, Always-On") {

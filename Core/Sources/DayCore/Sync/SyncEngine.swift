@@ -1,16 +1,27 @@
 import Foundation
+import Synchronization
 
-/// Fetches every account's calendars from Google and keeps the cache files and the widget
-/// snapshot current. The real store draws from `load()` at once and calls `refresh()` on
-/// launch, return to foreground, pull to refresh, Command-R and the Mac's timer; views never
-/// wait on it.
+/// Keeps every account's calendars current from Google, and the cache files and the widget
+/// snapshot with them. The real store draws from `load()` at once and calls `refresh()` on
+/// launch, return to the front, pull to refresh, Command-R, wake, network return and the
+/// timer; views never wait on it.
 ///
-/// A refresh, per account and in parallel: a valid access token (refreshing it when it has
-/// under a minute left), `calendarList.list`, `calendars.get` for labels once a day, then,
-/// after shared calendars are folded to one account, `events.list` for each visible calendar
-/// over today minus 35 days through today plus 120. One account failing never touches
+/// A refresh, per account and in parallel: a valid access token (refreshed when under a
+/// minute is left), the calendar list read incrementally, then, after shared calendars are
+/// folded to one account, each visible calendar read incrementally from its sync token. A
+/// calendar with no usable token is read in full over today minus 35 days through today plus
+/// 127, which issues one. Usable means: Google has not refused it, its window still holds
+/// today minus 35 through plus 120, and its full read is under a day old (a few hours less,
+/// differently for each calendar, so the daily reads do not all fall in one refresh). A calendar
+/// Google issued no token for is read in full once an hour. `docs/SYNC.md` has the whole story.
+///
+/// A refresh can be cancelled: the caller that started it stops it, every request in flight
+/// ends, and whatever calendars already answered are written. The background task relies on
+/// that, because the system ends its time without further notice.
+///
+/// One account failing never touches another, and one calendar failing never touches
 /// another: `invalid_grant` or a missing calendar scope marks only that account signed out,
-/// and its cached events stay on screen.
+/// its cached events stay on screen, and the calendars that answered are written.
 ///
 /// Sign-in is two calls around the app's `WebAuthenticationSession`:
 ///
@@ -52,10 +63,24 @@ public actor SyncEngine {
         self.clock = clock
     }
 
-    /// Today minus 35 days through today plus 120: the month's rows above and below, without
-    /// ever asking Google to expand endless series without a bound.
+    /// Today minus 35 days through today plus 120: the days every refresh keeps current, the
+    /// month's rows above and below, without ever asking Google to expand endless series
+    /// without a bound.
     public static func defaultWindow(today: CivilDate) -> ClosedRange<CivilDate> {
         today.adding(days: -35)...today.adding(days: 120)
+    }
+
+    /// The days a full read asks for: the default window and a week more ahead, so a token
+    /// still holds the days the default window slides into before the next daily full read.
+    static func syncWindow(today: CivilDate) -> ClosedRange<CivilDate> {
+        today.adding(days: -35)...today.adding(days: 127)
+    }
+
+    /// Yesterday through ten days ahead: what the near file holds. The widget needs today
+    /// through eight days ahead (`WidgetSnapshot.days`), and the extra days on both sides keep
+    /// it off the full cache for the two days the app may go unopened.
+    static func nearDays(today: CivilDate) -> ClosedRange<CivilDate> {
+        today.adding(days: -1)...today.adding(days: 10)
     }
 
     // MARK: Reading
@@ -66,7 +91,23 @@ public actor SyncEngine {
         SyncEngine.load(from: cache)
     }
 
-    static func load(from cache: CacheDirectory) -> CalendarData {
+    /// The widget's snapshot as it is on disk, which the app compares with the one the
+    /// widget last reloaded for.
+    public nonisolated func widgetSnapshot() -> WidgetSnapshot? {
+        WidgetSnapshot.read(from: cache)
+    }
+
+    /// What the widget needs: the same as `load()` but each account's events and tokens from
+    /// its near file when that holds `days`, so the extension never decodes the whole cache
+    /// while the app keeps the near file written. An account with no usable near file (a
+    /// file from before it existed, one written for other days) reads in full.
+    nonisolated func loadForWidget(days: ClosedRange<CivilDate>) -> CalendarData {
+        SyncEngine.load(from: cache, near: days)
+    }
+
+    static func load(from cache: CacheDirectory, near days: ClosedRange<CivilDate>? = nil)
+        -> CalendarData
+    {
         let accounts = cache.read([Account].self, from: CacheFile.accounts) ?? []
         var data = CalendarData(
             accounts: accounts,
@@ -76,9 +117,14 @@ public actor SyncEngine {
             if let file = cache.read(CalendarsFile.self, from: CacheFile.calendars(account.id)) {
                 data.calendarsByAccount[account.id] = file.calendars
             }
-            if let file = cache.read(EventsFile.self, from: CacheFile.events(account.id)) {
-                data.eventsByAccount[account.id] = file.events
-                data.fetchedAtByAccount[account.id] = file.fetchedAt
+            if let days, let near = cache.near(account.id), near.covers(days) {
+                data.eventsByAccount[account.id] = near.events
+                data.syncByAccount[account.id] = near.sync
+                data.fetchedAtByAccount[account.id] = near.fetchedAt
+            } else if let stored = cache.account(account.id) {
+                data.eventsByAccount[account.id] = stored.events
+                data.syncByAccount[account.id] = stored.sync
+                data.fetchedAtByAccount[account.id] = stored.fetchedAt
             }
         }
         return data
@@ -98,6 +144,8 @@ public actor SyncEngine {
     /// already on the list. With `repairing`, a different Google account is refused, so Sign
     /// In Again cannot quietly swap one account for another. A grant without calendar access
     /// still adds the account, signed out, so the list can say so. Call `refresh()` after.
+    /// An account signed in again keeps its sync tokens: the next refresh reads only what
+    /// changed while it was signed out.
     @discardableResult
     public func completeSignIn(
         _ request: AuthorizationRequest, callback: URL, repairing expected: AccountID? = nil
@@ -127,15 +175,14 @@ public actor SyncEngine {
         return account
     }
 
-    /// Forgets the account on this device: its tokens, calendars, events and toggles.
-    /// Nothing changes in Google.
+    /// Forgets the account on this device: its tokens, calendars, events, sync tokens and
+    /// toggles. Nothing changes in Google.
     public func removeAccount(_ id: AccountID) throws {
         try tokens.removeToken(for: id)
         var accounts = cache.read([Account].self, from: CacheFile.accounts) ?? []
         accounts.removeAll { $0.id == id }
         try cache.write(accounts, to: CacheFile.accounts)
-        cache.remove(CacheFile.calendars(id))
-        cache.remove(CacheFile.events(id))
+        cache.removeAccount(id)
         var visibility = cache.read(CalendarVisibility.self, from: CacheFile.visibility)
             ?? CalendarVisibility()
         visibility.forget(id)
@@ -144,8 +191,9 @@ public actor SyncEngine {
         writeWidgetSnapshot(force: true)
     }
 
-    /// The person's toggle for one calendar. Showing a calendar that has never been fetched
-    /// needs a `refresh()` before its events appear.
+    /// The person's toggle for one calendar. A calendar shown again resumes from its own
+    /// token on the next `refresh()`, reading only what changed while it was hidden; one
+    /// never fetched is read in full then.
     public func setVisible(_ visible: Bool, calendar id: CalendarID) throws {
         var visibility = cache.read(CalendarVisibility.self, from: CacheFile.visibility)
             ?? CalendarVisibility()
@@ -156,46 +204,132 @@ public actor SyncEngine {
     }
 
     /// Rebuilds the widget snapshot from the cache and writes it (newer wins unless
-    /// `force`). Returns the snapshot when it was written. The app then reloads the widget's
-    /// timelines.
+    /// `force`). Returns the snapshot when it was written.
     @discardableResult
     public func writeWidgetSnapshot(force: Bool = false) -> WidgetSnapshot? {
-        guard let snapshot = load().widgetSnapshot(now: clock(), calendar: calendar),
-            (try? snapshot.write(to: cache, force: force)) == true
+        let now = clock()
+        guard let snapshot = load().widgetSnapshot(now: now, calendar: calendar),
+            (try? snapshot.write(to: cache, force: force, now: now)) == true
         else { return nil }
         return snapshot
     }
 
     // MARK: Refresh
 
-    /// Fetches every signed-in account again and rewrites the cache and the snapshot.
+    /// Reads every signed-in account's changes and rewrites the cache and the snapshot.
     /// Calls that arrive while one is running share its result, unless accounts or
     /// visibility changed since it started.
-    public func refresh() async -> SyncReport {
+    ///
+    /// Cancelling the caller that started a refresh cancels it: every request ends, calendars
+    /// that had already answered are written, and the report says Google was not reached.
+    /// A caller that joined a refresh already running stops waiting when it is cancelled and
+    /// leaves the run to its starter; if the starter is cancelled, the callers still waiting
+    /// start a refresh of their own. `retry` replaces the client's retry policy for a refresh
+    /// this call starts.
+    public func refresh(retry: RetryPolicy? = nil) async -> SyncReport {
         while let running = inFlight {
-            let report = await running.task.value
+            guard let shared = await SyncEngine.wait(for: running.task) else {
+                return report(.unreachable)
+            }
             if inFlight?.task == running.task { inFlight = nil }
-            if running.generation == generation { return report }
+            // A run that was cancelled says nothing about Google: callers that joined it
+            // start their own.
+            if running.task.isCancelled { continue }
+            if running.generation == generation { return shared }
         }
-        let task = Task { await self.performRefresh() }
+        let task = Task { await self.performRefresh(retry: retry) }
         inFlight = (task, generation)
-        let report = await task.value
+        let result = await withTaskCancellationHandler {
+            await task.value
+        } onCancel: {
+            task.cancel()
+        }
         if inFlight?.task == task { inFlight = nil }
-        return report
+        return result
+    }
+
+    /// The refresh for a background task, which the system ends without notice when its time
+    /// runs out and punishes by ending the app when work goes on past that. One try per
+    /// request, so a failing call costs seconds and not a minute of backoff, and `limit` for
+    /// the whole refresh: at the limit every request is cancelled, what answered is written,
+    /// and the report says Google was not reached. The next refresh reads from there.
+    public func refreshInBackground(within limit: Duration = .seconds(20)) async -> SyncReport {
+        do {
+            return try await SyncEngine.withDeadline(limit) { await self.refresh(retry: .once) }
+        } catch {
+            return report(.unreachable)
+        }
+    }
+
+    /// Waits for a refresh another caller started, or gives up with nil when this caller is
+    /// cancelled first. Awaiting a task's value alone would hold a cancelled caller until the
+    /// run ended, which for a background task is the one thing it cannot do.
+    private static func wait(for task: Task<SyncReport, Never>) async -> SyncReport? {
+        let gate = Gate()
+        return await withTaskCancellationHandler {
+            await withCheckedContinuation { (continuation: CheckedContinuation<SyncReport?, Never>) in
+                gate.arm(continuation)
+                Task { gate.finish(await task.value) }
+            }
+        } onCancel: {
+            gate.finish(nil)
+        }
+    }
+
+    /// Resumes a waiter exactly once, with whichever comes first: the run's report or the
+    /// waiter's cancellation.
+    private final class Gate: Sendable {
+        private enum State {
+            case idle
+            case armed(CheckedContinuation<SyncReport?, Never>)
+            case done(SyncReport?)
+        }
+
+        private let state = Mutex(State.idle)
+
+        func arm(_ continuation: CheckedContinuation<SyncReport?, Never>) {
+            state.withLock { state in
+                if case .done(let value) = state {
+                    continuation.resume(returning: value)
+                } else {
+                    state = .armed(continuation)
+                }
+            }
+        }
+
+        func finish(_ value: SyncReport?) {
+            state.withLock { state in
+                switch state {
+                case .idle:
+                    state = .done(value)
+                case .armed(let continuation):
+                    state = .done(value)
+                    continuation.resume(returning: value)
+                case .done:
+                    break
+                }
+            }
+        }
     }
 
     /// Fetches the days of `days` the cache does not cover yet, for the Month scrolling past
-    /// the window. Days already covered are not fetched again.
+    /// the window. Days already covered are not fetched again; incremental reads keep them
+    /// current.
     public func extendWindow(toInclude days: ClosedRange<CivilDate>) async -> SyncReport {
         if let running = inFlight { _ = await running.task.value }
         return await performExtension(days)
     }
 
-    private func performRefresh() async -> SyncReport {
+    private func performRefresh(retry: RetryPolicy?) async -> SyncReport {
         let now = clock()
         let start = load()
-        guard let auth else { return SyncReport(outcome: .current, data: start) }
-        let window = SyncEngine.defaultWindow(today: CivilDate(now, in: calendar))
+        guard let configured = auth else { return report(.current) }
+        let auth = retry.map { configured.with(retry: $0) } ?? configured
+        let api = retry.map { self.api.with(retry: $0) } ?? self.api
+        let today = CivilDate(now, in: calendar)
+        let neededDays = SyncEngine.defaultWindow(today: today)
+        let needed = SyncEngine.interval(neededDays, calendar: calendar)
+        let fullDays = SyncEngine.syncWindow(today: today)
         var problems: [AccountID: AccountProblem] = [:]
 
         // Tokens, read once; the refresh token in use is remembered so an account signed in
@@ -217,7 +351,7 @@ public actor SyncEngine {
             }
         }
 
-        // Calendar lists and labels, all accounts at once.
+        // Calendar lists, all accounts at once.
         var lists: [AccountID: CalendarsFile] = [:]
         await withTaskGroup(of: (AccountID, Result<CalendarsFile, AccountProblem>).self) { group in
             for (id, authorizer) in authorizers {
@@ -245,46 +379,80 @@ public actor SyncEngine {
             try? cache.write(file, to: CacheFile.calendars(id))
         }
 
-        // Shared calendars fold to one account; only visible calendars are fetched.
+        // Shared calendars fold to one account; only visible calendars are read. A calendar
+        // whose own entry changed in a way its events decode from (its color, labels, zone or
+        // access) is read in full, because an incremental read would only bring the events
+        // that changed.
         var calendarLists = start.calendarsByAccount
         for (id, file) in lists { calendarLists[id] = file.calendars }
         let visibility = cache.read(CalendarVisibility.self, from: CacheFile.visibility)
             ?? CalendarVisibility()
         let kept = CalendarData.deduplicated(start.accounts.map { calendarLists[$0.id] ?? [] })
-        let range = SyncEngine.interval(window, calendar: calendar)
+        let before = Dictionary(
+            start.calendarsByAccount.values.joined().map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
 
-        var fetched: [AccountID: AccountEvents] = [:]
-        await withTaskGroup(of: (AccountID, Result<AccountEvents, AccountProblem>).self) { group in
+        var fetched: [AccountID: [CalendarID: CalendarFetchResult]] = [:]
+        await withTaskGroup(of: (AccountID, [CalendarID: CalendarFetchResult]).self) { group in
             for id in lists.keys {
                 guard let authorizer = authorizers[id] else { continue }
-                let wanted = kept.filter { $0.id.account == id && visibility.isVisible($0) }
-                group.addTask { [api] in
-                    do {
-                        let events = try await SyncEngine.fetchEvents(
-                            calendars: wanted, range: range, authorizer: authorizer, api: api)
-                        return (id, .success(events))
-                    } catch {
-                        return (id, .failure(AccountProblem(error)))
+                let stored = cache.account(id)
+                let plans = kept.filter { $0.id.account == id && visibility.isVisible($0) }
+                    .map { info -> (info: CalendarInfo, plan: CalendarPlan) in
+                        let changed = before[info.id].map {
+                            GoogleDecoding.decodesDifferently($0, info)
+                        } ?? false
+                        guard !changed, let state = stored?.state(of: info.id) else {
+                            return (info, .full)
+                        }
+                        return (info, state.plan(needed: needed, neededDays: neededDays, now: now))
                     }
+                group.addTask { [calendar] in
+                    let results = await SyncEngine.fetchCalendars(
+                        plans, fullDays: fullDays, calendar: calendar, authorizer: authorizer,
+                        api: api)
+                    return (id, results)
                 }
             }
-            for await (id, result) in group {
-                switch result {
-                case .success(let events): fetched[id] = events
-                case .failure(let problem): problems[id] = problem
-                }
-            }
+            for await (id, results) in group { fetched[id] = results }
         }
 
-        // Write each account's file from the current file on disk, with no suspension
+        // Each account's cache is rebuilt from what is on disk now, with no suspension
         // between reading and writing, so a concurrent window extension is never lost.
-        for (id, result) in fetched where accountsNow.contains(id) {
-            let previous = cache.read(EventsFile.self, from: CacheFile.events(id))
-            let listed = Set(kept.filter { $0.id.account == id }.map(\.id))
-            let file = SyncEngine.updated(
-                previous, with: result, listed: listed, window: window, fetchedAt: now,
-                calendar: calendar)
-            try? cache.write(file, to: CacheFile.events(id))
+        for (id, results) in fetched where accountsNow.contains(id) {
+            let previous = cache.account(id)
+            var account = previous ?? AccountCache()
+            var failures: [AccountProblem] = []
+            for (calendarID, result) in results {
+                switch result {
+                case .full(let events, let token, let window, let days, let wipe):
+                    let state = CalendarSync(
+                        calendar: calendarID, token: token, tokenFrom: window.start,
+                        tokenTo: window.end, fullSyncAt: now, syncedAt: now, days: days)
+                    account.replace(calendarID, with: events, state: state, wipe: wipe, calendar: calendar)
+                case .changes(let changes, let since, let next):
+                    // Only this engine writes tokens and refreshes never overlap, so a token
+                    // that moved meanwhile means the account was removed and added again.
+                    // The changes are dropped and the next refresh reads from what is there.
+                    if !account.apply(changes, to: calendarID, since: since, next: next, at: now, calendar: calendar) {
+                        failures.append(.failed(offline: false))
+                    }
+                case .unchanged:
+                    break
+                case .unreadable:
+                    account.forget(calendarID)
+                case .failed(let problem):
+                    failures.append(problem)
+                }
+            }
+            account.retain(listed: Set(kept.filter { $0.id.account == id }.map(\.id)))
+            account.expireStretches(at: now)
+            if let problem = AccountProblem.combined(failures) {
+                problems[id] = problem
+            } else {
+                account.fetchedAt = now
+            }
+            account.sortEvents(calendar: calendar)
+            store(account, for: id, previous: previous, now: now)
         }
 
         var newlySignedOut: [AccountID] = []
@@ -303,27 +471,27 @@ public actor SyncEngine {
 
         let data = load()
         if let snapshot = data.widgetSnapshot(now: now, calendar: calendar) {
-            _ = try? snapshot.write(to: cache)
+            _ = try? snapshot.write(to: cache, now: now)
         }
-        let failures = problems.values.compactMap { problem -> Bool? in
-            if case .failed(let offline) = problem { return offline }
-            return nil
-        }
-        let outcome: SyncOutcome =
-            failures.isEmpty ? .current : failures.allSatisfy { $0 } ? .offline : .unreachable
-        return SyncReport(outcome: outcome, data: data, newlySignedOut: newlySignedOut)
+        return report(SyncEngine.outcome(Array(problems.values)), data: data, newlySignedOut: newlySignedOut)
     }
 
     private func performExtension(_ days: ClosedRange<CivilDate>) async -> SyncReport {
         let start = load()
-        guard let auth else { return SyncReport(outcome: .current, data: start) }
-        let kept = start.calendars.filter { start.visibility.isVisible($0) }
+        guard let auth else { return report(.current, data: start) }
+        let shown = start.calendars.filter { start.visibility.isVisible($0) }
         var problems: [AccountProblem] = []
         for account in start.accounts where !account.signedOut {
-            guard let previous = cache.read(EventsFile.self, from: CacheFile.events(account.id))
-            else { continue }
-            let slices = SyncEngine.missing(days, from: previous.window)
-            guard !slices.isEmpty else { continue }
+            // A calendar never fetched is the next refresh's to read in full.
+            let states = start.syncByAccount[account.id] ?? []
+            var work: [(info: CalendarInfo, days: ClosedRange<CivilDate>)] = []
+            for info in shown where info.id.account == account.id {
+                guard let state = states.first(where: { $0.calendar == info.id }) else { continue }
+                for slice in SyncEngine.missing(days, from: state.days) {
+                    work.append((info, slice))
+                }
+            }
+            guard !work.isEmpty else { continue }
             let token: StoredToken
             do {
                 guard let stored = try tokens.token(for: account.id) else { continue }
@@ -334,237 +502,96 @@ public actor SyncEngine {
             }
             let authorizer = AccountAuthorizer(
                 account: account.id, token: token, auth: auth, tokens: tokens, clock: clock)
-            let wanted = kept.filter { $0.id.account == account.id }
-            for slice in slices {
-                do {
-                    let result = try await SyncEngine.fetchEvents(
-                        calendars: wanted, range: SyncEngine.interval(slice, calendar: calendar),
-                        authorizer: authorizer, api: api)
-                    guard
-                        let current = cache.read(EventsFile.self, from: CacheFile.events(account.id))
-                    else { break }
-                    let listed = Set(start.calendars.filter { $0.id.account == account.id }.map(\.id))
-                    let file = SyncEngine.updated(
-                        current, with: result, listed: listed, window: slice,
-                        fetchedAt: current.fetchedAt, calendar: calendar)
-                    try? cache.write(file, to: CacheFile.events(account.id))
-                } catch {
-                    problems.append(AccountProblem(error))
-                    break
+            let results = await withTaskGroup(
+                of: (CalendarID, ClosedRange<CivilDate>, Result<[Event], AccountProblem>).self
+            ) { group in
+                for item in work {
+                    group.addTask { [api, calendar] in
+                        let result = await SyncEngine.fetchStretch(
+                            item.info, days: item.days, calendar: calendar,
+                            authorizer: authorizer, api: api)
+                        return (item.info.id, item.days, result)
+                    }
+                }
+                var all: [(CalendarID, ClosedRange<CivilDate>, Result<[Event], AccountProblem>)] = []
+                for await result in group { all.append(result) }
+                return all
+            }
+            guard let previous = cache.account(account.id) else { continue }
+            var current = previous
+            for (id, slice, result) in results {
+                switch result {
+                case .success(let events):
+                    // A calendar dropped from the list meanwhile is not brought back.
+                    guard current.state(of: id) != nil else { continue }
+                    current.merge(events, of: id, over: slice, at: clock(), calendar: calendar)
+                case .failure(let problem):
+                    problems.append(problem)
                 }
             }
+            current.sortEvents(calendar: calendar)
+            store(current, for: account.id, previous: previous, now: clock())
         }
+        return report(SyncEngine.outcome(problems))
+    }
+
+    /// Writes one account's cache: the events, then the sync file, then the near file the
+    /// widget reads. Readers take them in the opposite order (`CacheDirectory.account(_:)`).
+    private func store(_ account: AccountCache, for id: AccountID, previous: AccountCache?, now: Date) {
+        do {
+            try cache.write(account, for: id, previous: previous)
+            try cache.writeNear(
+                account, for: id, days: SyncEngine.nearDays(today: CivilDate(now, in: calendar)),
+                calendar: calendar)
+        } catch {
+            // The files keep what they held; the next refresh writes them again.
+        }
+    }
+
+    private func report(
+        _ outcome: SyncOutcome, data: CalendarData? = nil, newlySignedOut: [AccountID] = []
+    ) -> SyncReport {
+        SyncReport(
+            outcome: outcome, data: data ?? load(), newlySignedOut: newlySignedOut,
+            snapshot: WidgetSnapshot.read(from: cache))
+    }
+
+    /// Nothing, `Offline`, or `Couldn't reach Google`, from every account's problem.
+    /// Signed-out accounts have their own line and do not count here.
+    static func outcome(_ problems: [AccountProblem]) -> SyncOutcome {
         let failures = problems.compactMap { problem -> Bool? in
             if case .failed(let offline) = problem { return offline }
             return nil
         }
-        let outcome: SyncOutcome =
-            failures.isEmpty ? .current : failures.allSatisfy { $0 } ? .offline : .unreachable
-        return SyncReport(outcome: outcome, data: load())
+        return failures.isEmpty ? .current : failures.allSatisfy { $0 } ? .offline : .unreachable
     }
 
-    // MARK: Widget, stage two
+    // MARK: Days and windows
 
-    /// The widget's own fetch: when the snapshot is older than `maxAge`, fetch today through
-    /// eight days ahead for every visible calendar, one try per call and the whole fetch cut
-    /// off at `deadline`, then write the snapshot (newer wins). Falls back to the snapshot
-    /// on disk on any failure, which may be nil when the app has never written one. Reads
-    /// the app's files but writes only the snapshot and refreshed tokens.
-    public func refreshWidgetSnapshot(
-        maxAge: TimeInterval = WidgetSnapshot.freshFor, deadline: Duration = .seconds(5)
-    ) async -> WidgetSnapshot? {
-        let now = clock()
-        let existing = WidgetSnapshot.read(from: cache)
-        if let existing, existing.isFresh(at: now, maxAge: maxAge) { return existing }
-        let data = load()
-        guard let auth, !data.accounts.isEmpty else { return existing }
-
-        let days = WidgetSnapshot.days(from: CivilDate(now, in: calendar))
-        let range = SyncEngine.interval(days, calendar: calendar)
-        let shown = data.calendars.filter { data.visibility.isVisible($0) }
-        let quickAuth = auth.with(retry: .once)
-        let quickAPI = api.with(retry: .once)
-        var authorizers: [AccountID: AccountAuthorizer] = [:]
-        var fresh = data
-        for (i, account) in data.accounts.enumerated() where !account.signedOut {
-            let stored: StoredToken?
-            do {
-                stored = try tokens.token(for: account.id)
-            } catch {
-                // The keychain is unreadable (before first unlock): keep what is on disk.
-                return existing
-            }
-            guard let token = stored else {
-                fresh.accounts[i].signedOut = true
-                continue
-            }
-            authorizers[account.id] = AccountAuthorizer(
-                account: account.id, token: token, auth: quickAuth, tokens: tokens, clock: clock)
-        }
-        guard !authorizers.isEmpty else {
-            return existing ?? fresh.widgetSnapshot(now: now, calendar: calendar)
-        }
-
-        let work = authorizers
-        do {
-            let results = try await SyncEngine.withDeadline(deadline) {
-                try await withThrowingTaskGroup(of: (AccountID, AccountEvents?).self) { group in
-                    for (id, authorizer) in work {
-                        let wanted = shown.filter { $0.id.account == id }
-                        group.addTask {
-                            do {
-                                return (
-                                    id,
-                                    try await SyncEngine.fetchEvents(
-                                        calendars: wanted, range: range, authorizer: authorizer,
-                                        api: quickAPI)
-                                )
-                            } catch {
-                                // Signed out shows as a count on line 3; anything else falls
-                                // back to the snapshot on disk.
-                                guard AccountProblem(error) == .signedOut else { throw error }
-                                return (id, nil)
-                            }
-                        }
-                    }
-                    var results: [AccountID: AccountEvents?] = [:]
-                    for try await (id, events) in group { results.updateValue(events, forKey: id) }
-                    return results
-                }
-            }
-            for (id, events) in results {
-                if let events {
-                    fresh.eventsByAccount[id] = events.events
-                } else if let i = fresh.accounts.firstIndex(where: { $0.id == id }) {
-                    fresh.accounts[i].signedOut = true
-                }
-            }
-            let snapshot = WidgetSnapshot(
-                fetchedAt: now,
-                accountCount: fresh.accounts.count,
-                signedOutAccounts: fresh.accounts.filter(\.signedOut).count,
-                events: fresh.events(in: days, calendar: calendar))
-            if (try? snapshot.write(to: cache)) == true { return snapshot }
-            return WidgetSnapshot.read(from: cache) ?? snapshot
-        } catch {
-            return existing
-        }
-    }
-
-    // MARK: Fetching, off the actor
-
-    /// One account's calendar list, with labels read again once a day and for any calendar
-    /// not seen before. A label read that fails keeps the labels already known.
-    static func fetchCalendarList(
-        account: AccountID, authorizer: AccountAuthorizer, api: CalendarAPI,
-        previous: CalendarsFile?, now: Date
-    ) async throws -> CalendarsFile {
-        let entries = try await authorizer.authorized { try await api.calendarList(accessToken: $0) }
-        var labels: [String: [String: LabelInfo]] = [:]
-        for info in previous?.calendars ?? [] { labels[info.id.googleID] = info.labels }
-        let stale = previous?.labelsFetchedAt.map { !(0..<86_400).contains(now.timeIntervalSince($0)) }
-            ?? true
-        let wanted = entries.filter {
-            GoogleDecoding.mayHaveLabels($0) && (stale || labels[$0.id] == nil)
-        }
-        await withTaskGroup(of: (String, [String: LabelInfo]?).self) { group in
-            for entry in wanted {
-                group.addTask {
-                    let resource = try? await authorizer.authorized {
-                        try await api.calendar(entry.id, accessToken: $0)
-                    }
-                    return (entry.id, resource.map(GoogleDecoding.labels))
-                }
-            }
-            for await (id, found) in group {
-                if let found { labels[id] = found }
-            }
-        }
-        return CalendarsFile(
-            fetchedAt: now,
-            labelsFetchedAt: stale ? now : previous?.labelsFetchedAt,
-            calendars: GoogleDecoding.calendars(entries, account: account, labels: labels))
-    }
-
-    /// Events for `calendars` over `range`, all calendars at once. A calendar Google no
-    /// longer lets this account read (gone, or a 403 `forbidden`) comes back empty rather than
-    /// failing the account. Any other failure, including a project-wide 403 such as
-    /// `accessNotConfigured`, throws, so the account keeps its cached events and the screen
-    /// says `Couldn't reach Google`.
-    static func fetchEvents(
-        calendars: [CalendarInfo], range: DateInterval, authorizer: AccountAuthorizer,
-        api: CalendarAPI
-    ) async throws -> AccountEvents {
-        try await withThrowingTaskGroup(of: (CalendarID, [Event]).self) { group in
-            for info in calendars {
-                group.addTask {
-                    do {
-                        let google = try await authorizer.authorized {
-                            try await api.events(
-                                calendarID: info.id.googleID, from: range.start, to: range.end,
-                                accessToken: $0)
-                        }
-                        return (info.id, GoogleDecoding.events(google, on: info))
-                    } catch let error as CalendarAPIError where error.meansCalendarUnreadable {
-                        return (info.id, [])
-                    }
-                }
-            }
-            var result = AccountEvents(events: [], calendars: [])
-            for try await (id, events) in group {
-                result.calendars.insert(id)
-                result.events += events
-            }
-            return result
-        }
-    }
-
-    /// The account's new file: what was fetched, plus the old events still worth keeping
-    /// (outside the fetched days, or on listed calendars not fetched this time, such as
-    /// hidden ones, so showing them again is instant). Calendars gone from the list drop out.
-    static func updated(
-        _ previous: EventsFile?, with result: AccountEvents, listed: Set<CalendarID>,
-        window: ClosedRange<CivilDate>, fetchedAt: Date, calendar: Calendar
-    ) -> EventsFile {
-        let fetchedRange = interval(window, calendar: calendar)
-        var covered = window
-        if let old = previous?.window,
-            old.lowerBound <= window.upperBound.adding(days: 1),
-            window.lowerBound <= old.upperBound.adding(days: 1)
-        {
-            covered = min(old.lowerBound, window.lowerBound)...max(old.upperBound, window.upperBound)
-        }
-        let coveredRange = interval(covered, calendar: calendar)
-        let kept = (previous?.events ?? []).filter { event in
-            guard listed.contains(event.id.calendar),
-                overlaps(event, coveredRange, calendar: calendar)
-            else { return false }
-            return !result.calendars.contains(event.id.calendar)
-                || !overlaps(event, fetchedRange, calendar: calendar)
-        }
-        var seen = Set<EventID>()
-        let events = (result.events + kept)
-            .filter { seen.insert($0.id).inserted }
-            .sorted { lhs, rhs in
-                let l = lhs.time.start(in: calendar)
-                let r = rhs.time.start(in: calendar)
-                return l != r ? l < r : lhs.id < rhs.id
-            }
-        return EventsFile(fetchedAt: fetchedAt, window: covered, events: events)
-    }
-
-    /// The parts of `days` outside `covered`, at most one on each side.
+    /// What to fetch so the covered days reach `days`: at most one stretch on each side,
+    /// each starting at the covered edge, so a request beyond a gap fills the gap too and the
+    /// covered days stay one unbroken range.
     static func missing(
         _ days: ClosedRange<CivilDate>, from covered: ClosedRange<CivilDate>
     ) -> [ClosedRange<CivilDate>] {
         var slices: [ClosedRange<CivilDate>] = []
         if days.lowerBound < covered.lowerBound {
-            slices.append(days.lowerBound...min(days.upperBound, covered.lowerBound.adding(days: -1)))
+            slices.append(days.lowerBound...covered.lowerBound.adding(days: -1))
         }
         if days.upperBound > covered.upperBound {
-            slices.append(max(days.lowerBound, covered.upperBound.adding(days: 1))...days.upperBound)
+            slices.append(covered.upperBound.adding(days: 1)...days.upperBound)
         }
         return slices
+    }
+
+    /// The two ranges as one, when they touch or overlap; nil when a gap lies between.
+    public static func union(_ a: ClosedRange<CivilDate>, _ b: ClosedRange<CivilDate>)
+        -> ClosedRange<CivilDate>?
+    {
+        guard a.lowerBound <= b.upperBound.adding(days: 1),
+            b.lowerBound <= a.upperBound.adding(days: 1)
+        else { return nil }
+        return min(a.lowerBound, b.lowerBound)...max(a.upperBound, b.upperBound)
     }
 
     /// Midnight at the start of the first day to midnight after the last, in `calendar`.
@@ -608,11 +635,19 @@ public struct SyncReport: Sendable {
     public var data: CalendarData
     /// Accounts this fetch found signed out, for `Google signed out you@acme.com.`
     public var newlySignedOut: [AccountID]
+    /// The widget's snapshot on disk after the fetch, which may be the widget's own when it
+    /// was newer. The app reloads the widget only when this differs from what it last
+    /// reloaded for.
+    public var snapshot: WidgetSnapshot?
 
-    public init(outcome: SyncOutcome, data: CalendarData, newlySignedOut: [AccountID] = []) {
+    public init(
+        outcome: SyncOutcome, data: CalendarData, newlySignedOut: [AccountID] = [],
+        snapshot: WidgetSnapshot? = nil
+    ) {
         self.outcome = outcome
         self.data = data
         self.newlySignedOut = newlySignedOut
+        self.snapshot = snapshot
     }
 }
 
@@ -630,83 +665,4 @@ public enum SyncError: Error, Hashable, Sendable {
     case noGoogleClient
     /// The widget's fetch ran out of time.
     case deadline
-}
-
-/// One account's fetched events and the calendars they came from.
-struct AccountEvents: Sendable {
-    var events: [Event]
-    var calendars: Set<CalendarID>
-}
-
-/// Why one account's fetch stopped.
-enum AccountProblem: Error, Hashable, Sendable {
-    /// Google refused the grant or it lacks calendar access: `Sign In Again…`.
-    case signedOut
-    /// Anything else; the account's cache stays and the next refresh tries again.
-    case failed(offline: Bool)
-
-    init(_ error: any Error) {
-        switch error {
-        case let problem as AccountProblem:
-            self = problem
-        case let oauth as OAuthError where oauth.signsOut:
-            self = .signedOut
-        case let api as CalendarAPIError where api == .insufficientScope:
-            self = .signedOut
-        default:
-            self = .failed(offline: GoogleHTTP.isOffline(error))
-        }
-    }
-}
-
-/// Hands out one account's access token, refreshing it when it is about to expire or Google
-/// rejected it, and saving the refreshed token for the next launch and for the widget.
-/// Concurrent requests for a new token share one refresh.
-actor AccountAuthorizer {
-    let account: AccountID
-    let auth: GoogleAuth
-    let tokens: any TokenStore
-    let clock: @Sendable () -> Date
-    private(set) var token: StoredToken
-    private var refreshing: Task<StoredToken, any Error>?
-
-    init(
-        account: AccountID, token: StoredToken, auth: GoogleAuth, tokens: any TokenStore,
-        clock: @escaping @Sendable () -> Date
-    ) {
-        self.account = account
-        self.token = token
-        self.auth = auth
-        self.tokens = tokens
-        self.clock = clock
-    }
-
-    /// A token with more than a minute left, never `rejected`.
-    func accessToken(rejecting rejected: String? = nil) async throws -> String {
-        if let valid = token.validAccessToken(at: clock()), valid != rejected {
-            return valid
-        }
-        if let refreshing {
-            return try await refreshing.value.accessToken ?? ""
-        }
-        let task = Task { [auth, token, clock] in try await auth.refresh(token, now: clock()) }
-        refreshing = task
-        defer { refreshing = nil }
-        let refreshed = try await task.value
-        token = refreshed
-        try? tokens.save(refreshed, for: account)
-        return refreshed.accessToken ?? ""
-    }
-
-    /// Runs `call` with a token; on a 401, once more with a new one.
-    nonisolated func authorized<Value: Sendable>(
-        _ call: @Sendable (String) async throws -> Value
-    ) async throws -> Value {
-        let access = try await accessToken()
-        do {
-            return try await call(access)
-        } catch CalendarAPIError.unauthorized {
-            return try await call(try await accessToken(rejecting: access))
-        }
-    }
 }

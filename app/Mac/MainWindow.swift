@@ -64,10 +64,6 @@ struct MainWindow: View {
             login.refresh()
         }
         .onDisappear { state.windowIsOpen = false }
-        .task(id: firstRun) {
-            guard !firstRun else { return }
-            await state.settleScroll()
-        }
         .sheet(isPresented: $state.showsGoToDate) {
             GoToDateSheet(initial: state.day) { state.goTo($0) }
                 .calendarStore(store)
@@ -79,6 +75,14 @@ struct MainWindow: View {
     private var calendarScreen: some View {
         MonthView(scroll: state.scroll, selection: state.day) { day in
             state.select(day)
+        }
+        // The page always holds the selected day. Arrow keys, Previous Week and the menu
+        // bar's reveal move the day without naming a month, so the page follows the day here;
+        // the toolbar and Go to Date move both together and this does nothing.
+        .onChange(of: state.day, initial: true) { _, day in
+            let scroll = state.scroll
+            guard MonthScroll.firstOfMonth(day) != scroll.shown(today: store.today) else { return }
+            scroll.show(day, today: store.today, calendar: store.calendar)
         }
         .inspector(isPresented: $state.showsDayPane) {
             DayView(day: state.day, selection: $state.selectedEvent, presented: $state.presentedEvent)

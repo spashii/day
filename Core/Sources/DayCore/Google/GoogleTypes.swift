@@ -9,15 +9,19 @@ import Foundation
 struct GooglePage<Item: Decodable & Sendable>: Decodable, Sendable {
     var items: [Item]
     var nextPageToken: String?
+    /// Only on the last page: where the next incremental sync of this collection starts.
+    var nextSyncToken: String?
 
     enum CodingKeys: String, CodingKey {
         case items
         case nextPageToken
+        case nextSyncToken
     }
 
     init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         nextPageToken = try c.decodeIfPresent(String.self, forKey: .nextPageToken)
+        nextSyncToken = try c.decodeIfPresent(String.self, forKey: .nextSyncToken)
         let lenient = try c.decodeIfPresent([Lenient<Item>].self, forKey: .items) ?? []
         items = lenient.compactMap(\.value)
     }
@@ -70,7 +74,9 @@ public struct GoogleEventLabel: Decodable, Hashable, Sendable {
     public var colorId: String?
 }
 
-/// An event from `events.list` with `singleEvents=true`.
+/// An event from `events.list` with `singleEvents=true`. In an incremental answer a
+/// `cancelled` item may carry nothing but its `id` (a deleted event) or its `id`,
+/// `recurringEventId` and `originalStartTime` (a cancelled instance of a series).
 public struct GoogleEvent: Decodable, Hashable, Sendable {
     /// `start`, `end` and `originalStartTime`: `date` for all-day, `dateTime` otherwise.
     public struct Time: Decodable, Hashable, Sendable {

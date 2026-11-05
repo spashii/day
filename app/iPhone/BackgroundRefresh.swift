@@ -2,16 +2,25 @@ import BackgroundTasks
 import DayCore
 import UIKit
 
-/// The background refresh: a bonus on top of the widget's own fetch, because the system runs
-/// `BGAppRefreshTask` when it likes and promises no schedule. Each run fetches today through
-/// eight days ahead into the widget's snapshot, reloads the Lock Screen and asks for the next
-/// run 30 minutes out.
+/// The background refresh: a bonus on top of the widget's own read on every timeline reload,
+/// because the system runs `BGAppRefreshTask` when it likes and promises no schedule (it
+/// learns from how often the app is opened, and runs none in Low Power Mode or after the app
+/// is swiped away). Each run is the app's own incremental refresh, so the next launch opens
+/// on current data and current tokens; it reloads the Lock Screen only when the snapshot
+/// changed, and asks for the next run 15 minutes out.
+///
+/// The system ends a run without notice when its time is up, by cancelling the task, and ends
+/// the app if the work goes on past that. So a run spends at most 20 seconds, with one try
+/// per request (`AppModel.refreshInBackground`), and cancelling it stops every request at
+/// once; the calendars that already answered are written and the next run starts from them.
 ///
 /// `DayApp` attaches the task's handler to its scene (`.backgroundTask(.appRefresh)`), which
 /// registers it while the app starts, as the system requires.
 enum BackgroundRefresh {
-    /// How soon the next run may begin. The system decides the real time.
-    static let interval: TimeInterval = 30 * 60
+    /// How soon the next run may begin. The system decides the real time; asking for less
+    /// than it grants costs nothing, and an incremental refresh is cheap enough to take every
+    /// run offered.
+    static let interval: TimeInterval = 15 * 60
 
     /// Asks for the next run. Fails quietly where the system offers none, such as the
     /// simulator, and does nothing until an account is signed in.
@@ -24,6 +33,8 @@ enum BackgroundRefresh {
     }
 
     /// The task body. The next run is requested first, so a run cut short still leaves one.
+    /// It returns as soon as the refresh does, cancelled or not, because the system counts a
+    /// body that outlives its time against the app.
     @MainActor
     static func perform() async {
         schedule(for: AppLaunch.shared.model)

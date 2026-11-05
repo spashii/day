@@ -1,9 +1,9 @@
 import DayCore
 import SwiftUI
 
-/// The system date picker for jumping the month to any day: the iPhone opens it from the
-/// month title, the Mac from `Go to Date…`. The jump waits for Done, because the graphical
-/// picker also changes its date while the month and year wheels turn.
+/// The system date picker for jumping the month to any day, from `Go to Date…` in the
+/// iPhone's bottom bar and the Mac's menu. The jump waits for the confirm button, because the
+/// graphical picker also changes its date while the month and year wheels turn.
 struct GoToDateSheet: View {
     @EnvironmentStore private var store
     @Environment(\.dismiss) private var dismiss
@@ -27,18 +27,26 @@ struct GoToDateSheet: View {
             )
             .datePickerStyle(.graphical)
             .labelsHidden()
-            .scenePadding(.horizontal)
+            #if os(macOS)
+                // The Mac's graphical picker is small and fixed; the sheet hugs it.
+                .fixedSize()
+                .padding(Spacing.block)
+            #else
+                .scenePadding(.horizontal)
+            #endif
             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
             .navigationTitle("Go to date")
             #if os(iOS)
                 .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
+                // The system's roles: a close mark and a tinted checkmark on the iPhone, Cancel
+                // and a default Done that Return presses on the Mac.
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", role: .cancel) { dismiss() }
+                    Button(role: .cancel) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
+                    Button(role: .confirm) {
                         onPick(date.map { CivilDate($0, in: calendar) } ?? initial)
                         dismiss()
                     }
@@ -49,7 +57,9 @@ struct GoToDateSheet: View {
             // As tall as the picker and its title bar, so no half-empty sheet.
             .presentationDetents(height > 0 ? [.height(height + 72)] : [.medium])
         #else
-            .frame(minWidth: 320)
+            // The Mac's sheet otherwise takes the navigation stack's default width, about
+            // three times the picker's; this is the picker with room for Cancel and Done.
+            .frame(width: 260)
         #endif
     }
 }

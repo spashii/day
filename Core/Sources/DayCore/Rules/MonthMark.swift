@@ -12,8 +12,9 @@ import Foundation
 ///    two hours or longer.
 /// 5. Dot: every other timed one-off (short internal calls).
 ///
-/// Rule 5 goes past what the month was asked to show and is the one design question left
-/// open. It is a single branch below, marked, so answering no is deleting that branch.
+/// Rule 5 is a settled design choice, not a default: short internal one-off calls are dots
+/// too, so the titled lines that remain are the ones worth reading. It stays one marked
+/// branch, so the month's density has a single place to change.
 public func monthMark(
     _ event: Event, account: Account, calendar: CalendarInfo, in local: Calendar
 ) -> MonthMark {
@@ -45,8 +46,8 @@ public func monthMark(
     }
 
     // Rule 4 is the helper; rule 5 is the branch. Without the branch every timed one-off is
-    // titled.
-    // RULE 5, short internal one-offs are dots (delete this branch to title them):
+    // titled, which in his data more than doubles the titled lines in a month.
+    // RULE 5, short internal one-offs are dots:
     if !hasReasonForTitle(event, account: account, in: local) {
         return .dot
     }

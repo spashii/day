@@ -2,10 +2,13 @@ import DayCore
 import Foundation
 
 /// What one week row of the month draws, worked out from the week's events before any view
-/// exists: which bars sit in which lane, and per day the titled lines and the dots.
+/// exists: which bars sit in which lane, and per day the titled lines and the dots. A month
+/// page draws only its own days, so the first and last rows leave the other month's days
+/// empty and cut bars off at the month's edge.
 struct WeekLayout {
     /// A bar's piece inside this week row. A bar that continues into the next or previous
-    /// row has a square end there; its title is drawn once per row.
+    /// row, or past the edge of the month, has a square end there; its title is drawn once
+    /// per row.
     struct Bar: Identifiable {
         let event: Event
         /// Columns 0 to 6, inclusive.
@@ -19,6 +22,9 @@ struct WeekLayout {
 
     struct Cell: Identifiable {
         let day: CivilDate
+        /// False for a day of the neighbouring month: an empty cell with no numeral, marks
+        /// or tap.
+        var isShown = true
         /// Titled one-offs starting this day, by start time.
         var titled: [Event] = []
         /// Recurring events: one gray dot each.
@@ -44,16 +50,27 @@ struct WeekLayout {
 
     /// - Parameters:
     ///   - events: merged events overlapping the week, from visible calendars.
+    ///   - shown: the days of the month on the page. Days of the week outside it stay empty.
     ///   - maxLanes: bar lanes the row may use: two on iPhone; nil on the Mac, where rows
     ///     grow so nothing hides.
     ///   - mark: the month mark of an event (`CalendarStore.monthMark`).
     init(
-        start: CivilDate, events: [Event], calendar: Calendar, maxLanes: Int?,
-        mark: (Event) -> MonthMark
+        start: CivilDate, events: [Event], shown: ClosedRange<CivilDate>, calendar: Calendar,
+        maxLanes: Int?, mark: (Event) -> MonthMark
     ) {
         self.start = start
-        let end = start.adding(days: 6)
-        var cells = (0..<7).map { Cell(day: start.adding(days: $0)) }
+        // The columns the page draws: the whole week, less the other month's days in the
+        // first and last rows. Bars clip to these and marks outside them are dropped.
+        let firstDay = max(start, shown.lowerBound)
+        let lastDay = min(start.adding(days: 6), shown.upperBound)
+        var cells = (0..<7).map { offset in
+            let day = start.adding(days: offset)
+            return Cell(day: day, isShown: shown.contains(day))
+        }
+        guard firstDay <= lastDay else {
+            self.cells = cells
+            return
+        }
         var pending: [(event: Event, covered: ClosedRange<CivilDate>, columns: ClosedRange<Int>)] = []
 
         for event in events {
@@ -61,14 +78,14 @@ struct WeekLayout {
             if kind == .hidden { continue }
             let covered = coveredDays(event, calendar: calendar)
             if kind == .bar {
-                let first = max(covered.lowerBound, start)
-                let last = min(covered.upperBound, end)
-                guard first <= last else { continue }
-                pending.append((event, covered, start.distance(to: first)...start.distance(to: last)))
+                let from = max(covered.lowerBound, firstDay)
+                let to = min(covered.upperBound, lastDay)
+                guard from <= to else { continue }
+                pending.append((event, covered, start.distance(to: from)...start.distance(to: to)))
                 continue
             }
+            guard (firstDay...lastDay).contains(covered.lowerBound) else { continue }
             let column = start.distance(to: covered.lowerBound)
-            guard (0..<7).contains(column) else { continue }
             switch kind {
             case .titled:
                 cells[column].titled.append(event)
@@ -113,8 +130,8 @@ struct WeekLayout {
             bars.append(
                 Bar(
                     event: item.event, columns: item.columns, lane: lane,
-                    continuesBefore: item.covered.lowerBound < start,
-                    continuesAfter: item.covered.upperBound > end))
+                    continuesBefore: item.covered.lowerBound < firstDay,
+                    continuesAfter: item.covered.upperBound > lastDay))
         }
 
         self.cells = cells

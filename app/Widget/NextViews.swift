@@ -4,6 +4,8 @@ import WidgetKit
 
 /// The widget's content for the family it is placed in. No color anywhere: the Lock Screen
 /// renders vibrant, so hierarchy comes from weight and from white against secondary gray.
+/// The inline and circular families wear the symbol the person gave the next event's
+/// calendar, when there is one; the rectangular family has no room for it.
 struct NextWidgetView: View {
     let entry: NextEntry
 
@@ -22,18 +24,34 @@ struct NextWidgetView: View {
         let widget = entry.content
         switch family {
         case .accessoryInline:
-            NextInlineView(text: widget.inline, showsEvent: widget.showsEvent)
-                .widgetURL(widget.url)
+            NextInlineView(
+                text: widget.inline, showsEvent: widget.showsEvent,
+                symbol: widget.showsEvent ? entry.symbol : nil
+            )
+            .widgetURL(widget.url)
         case .accessoryRectangular:
             NextRectangularView(lines: widget.rectangular, isLuminanceReduced: isLuminanceReduced)
                 .widgetURL(widget.rectangular.url ?? widget.url)
         case .accessoryCircular:
-            NextCircularView(content: widget.circular)
-                .widgetURL(widget.url)
+            NextCircularView(
+                content: widget.circular,
+                symbol: widget.circular.isTime ? entry.symbol : nil
+            )
+            .widgetURL(widget.url)
         default:
             // Only the three Lock Screen families are supported, so nothing else is asked for.
             EmptyView()
         }
+    }
+}
+
+extension CircularContent {
+    /// A start time shows, as opposed to the `calendar` symbol that stands in when nothing
+    /// is ahead. Only a start time belongs to an event, so only it can wear its calendar's
+    /// symbol.
+    var isTime: Bool {
+        if case .time = self { return true }
+        return false
     }
 }
 
@@ -46,15 +64,29 @@ extension WidgetEntry {
     }
 }
 
-/// Above the clock. One `Text`, time first so the tail of the title is what truncates, and
-/// no symbol: the system keeps the date on this line.
+/// Above the clock. One `Text`, time first so the tail of the title is what truncates. The
+/// system keeps the date on this line, so it is never repeated. When the next event's
+/// calendar has a symbol, it leads the line, before the time. It is private with the title:
+/// a symbol such as `cross.case` says what kind of event is coming.
 struct NextInlineView: View {
     let text: String
     let showsEvent: Bool
+    /// The next event's calendar symbol; nil for none.
+    var symbol: NextSymbol? = nil
 
     var body: some View {
-        Text(verbatim: text)
+        if let symbol {
+            Label {
+                Text(verbatim: text)
+            } icon: {
+                Image(systemName: symbol.name)
+                    .accessibilityLabel(Text(verbatim: symbol.label))
+            }
             .privacySensitive(showsEvent)
+        } else {
+            Text(verbatim: text)
+                .privacySensitive(showsEvent)
+        }
     }
 }
 
@@ -119,11 +151,15 @@ struct NextRectangularView: View {
 }
 
 /// Below the clock, round: only a start time, as Apple's own circular Calendar widget shows
-/// it. `THU` sits above it when the event is not today and the period below it in 12-hour
-/// locales. The `calendar` symbol stands in when there is nothing to name, so the slot does
-/// not look broken. No ring, no title, no color.
+/// it. The next event's calendar symbol sits above the time when it has one, with `THU`
+/// beside it when the event is not today, and the period below in 12-hour locales. The
+/// generic `calendar` symbol stands in when there is nothing to name, so the slot does not
+/// look broken. No ring, no title, no color.
 struct NextCircularView: View {
     let content: CircularContent
+    /// The next event's calendar symbol; nil for none. Ignored when there is no start time
+    /// to put it above.
+    var symbol: NextSymbol? = nil
 
     var body: some View {
         ZStack {
@@ -131,10 +167,21 @@ struct NextCircularView: View {
             switch content {
             case .time(let time, let weekday, let period):
                 VStack(spacing: 0) {
-                    if let weekday {
-                        Text(verbatim: weekday)
-                            .font(.caption2)
-                            .textCase(.uppercase)
+                    if symbol != nil || weekday != nil {
+                        HStack(spacing: 2) {
+                            if let symbol {
+                                Image(systemName: symbol.name)
+                                    .font(.footnote)
+                                    .accessibilityLabel(Text(verbatim: symbol.label))
+                                    .privacySensitive()
+                            }
+                            if let weekday {
+                                Text(verbatim: weekday)
+                                    .font(.caption2)
+                                    .textCase(.uppercase)
+                            }
+                        }
+                        .minimumScaleFactor(0.8)
                     }
                     Text(verbatim: time)
                         .font(.title3)
@@ -155,3 +202,36 @@ struct NextCircularView: View {
         }
     }
 }
+
+#if DEBUG
+// The symbol in the two families that wear it: the circular one with the event today, on
+// another day, and in a 12-hour locale where the period sits below the time, and the inline
+// line. The timeline previews in NextPreviews.swift build entries without symbols, so these
+// draw the views directly.
+#Preview("Symbol, inline and circular", traits: .fixedLayout(width: 260, height: 120)) {
+    VStack(alignment: .leading, spacing: 8) {
+        NextInlineView(
+            text: "14:00 Investor call", showsEvent: true,
+            symbol: NextSymbol(name: "briefcase", label: "Work"))
+            .frame(width: 234, height: 26, alignment: .leading)
+        HStack(spacing: 8) {
+            NextCircularView(
+                content: .time("14:00", weekday: nil, period: nil),
+                symbol: NextSymbol(name: "briefcase", label: "Work")
+            )
+            .frame(width: 72, height: 72)
+            NextCircularView(
+                content: .time("9:30", weekday: "Thu", period: nil),
+                symbol: NextSymbol(name: "cross.case", label: "Health")
+            )
+            .frame(width: 72, height: 72)
+            NextCircularView(
+                content: .time("2:00", weekday: "Thu", period: "PM"),
+                symbol: NextSymbol(name: "figure.run", label: "Running")
+            )
+            .frame(width: 72, height: 72)
+        }
+    }
+    .padding(8)
+}
+#endif

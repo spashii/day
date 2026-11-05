@@ -17,6 +17,22 @@ enum NextData {
         case found(WidgetSnapshot)
     }
 
+    /// The events and calendar the entries for `snapshot` are built from, so the provider
+    /// can name each entry's next event by its calendar's symbol. Nil when the entries name
+    /// no event (no account, or a file that cannot be read).
+    static func source(snapshot: Snapshot, now: Date, calendar: Calendar) -> (
+        events: [Event], calendar: Calendar
+    )? {
+        switch snapshot {
+        case .missing:
+            return NextDemo.load(now: now).map { ($0.snapshot.events, $0.calendar) }
+        case .unreadable:
+            return nil
+        case .found(let snapshot):
+            return snapshot.accountCount > 0 ? (snapshot.events, calendar) : nil
+        }
+    }
+
     /// Every entry for a reload at `now`, in date order, never empty.
     static func entries(snapshot: Snapshot, now: Date, calendar: Calendar) -> [WidgetEntry] {
         switch snapshot {

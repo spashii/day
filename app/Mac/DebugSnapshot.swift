@@ -74,7 +74,7 @@
             case "dump":
                 let scroll = state.scroll
                 var text = "pane=\(state.showsDayPane) day=\(state.day.isoString)\n"
-                text += "top=\(String(describing: scroll.topWeek)) visible=\(scroll.visibleWeeks.map(\.isoString))\n"
+                text += "page=\(scroll.shown(today: state.store.today).isoString)\n"
                 NSApp.mainMenu?.update()
                 for item in NSApp.mainMenu?.items ?? [] {
                     let entries = (item.submenu?.items ?? []).map {

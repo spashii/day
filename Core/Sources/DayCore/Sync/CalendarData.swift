@@ -10,8 +10,11 @@ public struct CalendarData: Hashable, Sendable {
     public var calendarsByAccount: [AccountID: [CalendarInfo]]
     /// Each account's fetched events, not merged across accounts.
     public var eventsByAccount: [AccountID: [Event]]
-    /// When each account's events were last fetched in full.
+    /// When every shown calendar of each account last answered in the same refresh.
     public var fetchedAtByAccount: [AccountID: Date]
+    /// How each fetched calendar is kept current, per account: its sync token and the days
+    /// its events are complete for.
+    public var syncByAccount: [AccountID: [CalendarSync]]
     public var visibility: CalendarVisibility
 
     public init(
@@ -19,12 +22,14 @@ public struct CalendarData: Hashable, Sendable {
         calendarsByAccount: [AccountID: [CalendarInfo]] = [:],
         eventsByAccount: [AccountID: [Event]] = [:],
         fetchedAtByAccount: [AccountID: Date] = [:],
+        syncByAccount: [AccountID: [CalendarSync]] = [:],
         visibility: CalendarVisibility = CalendarVisibility()
     ) {
         self.accounts = accounts
         self.calendarsByAccount = calendarsByAccount
         self.eventsByAccount = eventsByAccount
         self.fetchedAtByAccount = fetchedAtByAccount
+        self.syncByAccount = syncByAccount
         self.visibility = visibility
     }
 
@@ -53,6 +58,24 @@ public struct CalendarData: Hashable, Sendable {
         let signedIn = accounts.filter { !$0.signedOut }.compactMap { fetchedAtByAccount[$0.id] }
         if let oldest = signedIn.min() { return oldest }
         return accounts.compactMap { fetchedAtByAccount[$0.id] }.min()
+    }
+
+    /// The days every shown calendar of the signed-in accounts has complete events for: what
+    /// the Month can draw without asking for more. A shown calendar never fetched yet is left
+    /// out, since the next refresh reads it in full. Nil before the first fetch, and when the
+    /// calendars cover days that do not meet.
+    public var syncedDays: ClosedRange<CivilDate>? {
+        let signedIn = Set(accounts.filter { !$0.signedOut }.map(\.id))
+        var lower: CivilDate?
+        var upper: CivilDate?
+        for info in calendars where signedIn.contains(info.id.account) && visibility.isVisible(info) {
+            guard let days = syncByAccount[info.id.account]?.first(where: { $0.calendar == info.id })?.days
+            else { continue }
+            lower = max(lower ?? days.lowerBound, days.lowerBound)
+            upper = min(upper ?? days.upperBound, days.upperBound)
+        }
+        guard let lower, let upper, lower <= upper else { return nil }
+        return lower...upper
     }
 
     /// Merged events from visible calendars whose time overlaps any of `days` in

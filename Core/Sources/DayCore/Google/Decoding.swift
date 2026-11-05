@@ -57,6 +57,21 @@ public enum GoogleDecoding {
             && !entry.id.hasSuffix("@group.v.calendar.google.com")
     }
 
+    /// The same test on a calendar already decoded.
+    public static func mayHaveLabels(_ info: CalendarInfo) -> Bool {
+        info.accessRole != .freeBusyReader
+            && !info.id.googleID.hasSuffix("@group.v.calendar.google.com")
+    }
+
+    /// Whether events decoded on `old` would come out differently on `new`: their color
+    /// (the calendar's and its labels), the zone a timed event falls back to, and the
+    /// `Busy` title of a free/busy calendar. An incremental read only returns events that
+    /// changed, so a calendar whose own entry changed this way is read in full instead.
+    public static func decodesDifferently(_ old: CalendarInfo, _ new: CalendarInfo) -> Bool {
+        old.colorHex != new.colorHex || old.labels != new.labels
+            || old.timeZone != new.timeZone || old.accessRole != new.accessRole
+    }
+
     /// The labels a calendar defines, keyed by label ID. A label with no readable color is
     /// left out, so its events fall back to their own color.
     public static func labels(_ resource: GoogleCalendarResource) -> [String: LabelInfo] {
@@ -115,6 +130,18 @@ public enum GoogleDecoding {
     /// Every event of one calendar's page, skipping any without a usable start.
     public static func events(_ google: [GoogleEvent], on calendar: CalendarInfo) -> [Event] {
         google.compactMap { event($0, on: calendar) }
+    }
+
+    /// One item of an incremental answer, as what it does to the cache. `cancelled` always
+    /// removes: a deleted event, a cancelled instance of a series, an event moved to another
+    /// calendar (it leaves a cancelled item behind), and the organizer's own deleted copy,
+    /// which still carries its details. An item that no longer decodes removes the copy too,
+    /// because a full read would leave it out and the two kinds of read must agree.
+    public static func change(_ google: GoogleEvent, on calendar: CalendarInfo) -> EventChange {
+        guard google.status != "cancelled", let event = event(google, on: calendar) else {
+            return .remove(googleID: google.id)
+        }
+        return .upsert(event)
     }
 
     /// The title exactly as written in Google. Google sends no `summary` for an untitled

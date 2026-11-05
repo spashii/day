@@ -1,6 +1,7 @@
 import AuthenticationServices
 import DayCore
 import Foundation
+import Network
 import Observation
 import OSLog
 // WebAuthenticationSession comes from the AuthenticationServices and SwiftUI overlay.
@@ -16,18 +17,22 @@ import SwiftUI
 /// once and refreshed behind the screen. Views never wait on the network, and nothing here
 /// spins over data that is already on screen.
 ///
-/// What it does, and when:
+/// What it does, and when (`docs/SYNC.md` has the costs and the limits):
 /// - Launch: reads the cache synchronously in `init`, so the first frame already knows the
 ///   accounts (the first-run screen is decided from them) and shows cached events.
 /// - Refresh: `sceneDidBecomeActive()` on launch and return to the foreground, `refresh()` for
-///   pull to refresh and Command-R, every 15 minutes while running, on the Mac after wake.
-///   As the app leaves, `sceneDidEnterBackground()` fetches only the widget's days (today
-///   through eight days ahead) inside the few seconds the system grants, then reloads the
-///   widget; the full window waits for the next time the app is in front. Every refresh ends
-///   with `WidgetCenter.reloadAllTimelines()` on iPhone.
+///   pull to refresh and Command-R, every 3 minutes while running, on the Mac after wake, and
+///   when the network comes back. Each one reads only what changed since the last (the
+///   engine's sync tokens), so a refresh that finds nothing costs one small call per
+///   calendar. As the app leaves, `sceneDidEnterBackground()` reads the widget's days inside
+///   the few seconds the system grants, unless a refresh began within the last minute;
+///   `refreshInBackground()` is the background refresh task's body, which has 20 seconds and
+///   stops when the system cancels it.
+/// - The widget: its timelines are reloaded only when the snapshot changed in a way it shows
+///   (`WidgetSnapshot.needsReload`), so the daily reload budget goes to real changes.
 /// - Toggles and removal apply on screen at once and are written by the engine in order, so
 ///   the person's last toggle always wins and the widget fetches what the app shows.
-/// - The Month scrolling past the cached window asks `events(in:)` for days the cache does not
+/// - The Month scrolling past the covered days asks `events(in:)` for days the cache does not
 ///   hold; the model then fetches the missing stretch on its own, in steps of about six
 ///   months, so a fast scroll never asks Google for years at once.
 /// - The clock: `now` advances each minute on the minute and again after the device clock,
@@ -86,14 +91,24 @@ final class AppModel: CalendarStore {
     /// before the change landed, so its answer is not drawn as it is.
     @ObservationIgnored private var changes = 0
     @ObservationIgnored private var lastRefreshAttempt: Date?
-    /// The days the cache holds for every account, as far as this run knows.
-    @ObservationIgnored private var covered: ClosedRange<CivilDate>?
     @ObservationIgnored private var windowFetch: Task<Void, Never>?
     @ObservationIgnored private var extensionRetryAfter = Date.distantPast
+    /// The snapshot the widget was last told to reload for, in this run. Nil until the first
+    /// reload, so a new run reloads once.
+    @ObservationIgnored private var reloadedFor: WidgetSnapshot?
+    @ObservationIgnored private var pathMonitor: NWPathMonitor?
+    /// Whether the network was there at the last path update; nil before the first.
+    @ObservationIgnored private var networkSatisfied: Bool?
 
     /// Refreshing again within this many seconds of the last try is skipped when the trigger
-    /// is only the app coming to the front, so flicking between apps costs no requests.
+    /// is only the app coming to the front, so flicking between apps costs no requests. The
+    /// same span spares the read of the widget's days as the app leaves: a visit that began
+    /// with a refresh costs one round of requests, not two.
     static let foregroundThrottle: TimeInterval = 60
+    /// How long the background task spends on one refresh. The system gives such a task about
+    /// thirty seconds and ends the app when the work outlasts it, so the rest is left for
+    /// writing the files and asking for the widget reload.
+    static let backgroundBudget: Duration = .seconds(20)
     /// Months scroll in steps this long, never more at once.
     static let extensionStep = 183
     /// The Month never asks for days further from today than this.
@@ -103,7 +118,7 @@ final class AppModel: CalendarStore {
         engine: SyncEngine,
         calendar: Calendar = .autoupdatingCurrent,
         clock: @escaping @Sendable () -> Date = { Date() },
-        autoRefreshInterval: Duration? = .seconds(15 * 60),
+        autoRefreshInterval: Duration? = AppModel.refreshInterval,
         reloadWidgets: @escaping @MainActor () -> Void = AppModel.reloadSystemWidgets
     ) {
         self.engine = engine
@@ -113,10 +128,12 @@ final class AppModel: CalendarStore {
         self.reloadWidgets = reloadWidgets
         now = clock()
         derived = Derived(data: engine.load(), calendar: calendar)
-        if derived.data.lastFetchedAt != nil {
-            covered = SyncEngine.defaultWindow(today: CivilDate(now, in: calendar))
-        }
     }
+
+    /// How often the data is read again while the app runs. An incremental read that finds
+    /// nothing costs one small call per calendar and per account list, so this can be short
+    /// enough that a change made elsewhere shows before anyone thinks to pull.
+    static let refreshInterval: Duration = .seconds(3 * 60)
 
     /// The store over the real engine and the Google client from `GoogleClientID`, with
     /// tokens in the keychain and files in the shared folder. Nil while the client is the
@@ -172,10 +189,10 @@ final class AppModel: CalendarStore {
             try? await engine.setVisible(visible, calendar: id)
             if pendingVisibility[id]?.version == version { pendingVisibility[id] = nil }
             changes += 1
-            reloadWidgets()
-            // Events of a calendar that was hidden were never fetched, so showing it needs a
-            // fetch before anything appears. It runs on its own, so the next toggle's write is
-            // not held up behind the network.
+            reloadWidgetsIfNeeded(engine.widgetSnapshot())
+            // A calendar shown again reads what changed while it was hidden (or in full, if
+            // it never was fetched) before it is current. It runs on its own, so the next
+            // toggle's write is not held up behind the network.
             if visible { Task { await refresh() } }
         }
     }
@@ -183,60 +200,71 @@ final class AppModel: CalendarStore {
     // MARK: Refreshing
 
     func refresh() async {
-        await sync()
-        reloadWidgets()
+        // A task of its own, so a pull to refresh that SwiftUI cancels when the list redraws
+        // does not end the read half way. Only the background task is cut short on purpose.
+        let report = await Task { await sync() }.value
+        reloadWidgetsIfNeeded(report.snapshot)
     }
 
-    /// Fetches every visible calendar and draws the result. Does not reload the widget, so
-    /// the callers that do it themselves reload exactly once.
-    private func sync() async {
+    /// Reads what changed for every visible calendar and draws the result. In the background
+    /// the engine's own budget applies, and cancelling the caller stops the read; a read cut
+    /// short says nothing about Google, so it leaves the line on screen as it was.
+    private func sync(inBackground: Bool = false) async -> SyncReport {
         lastRefreshAttempt = clock()
         let mark = changes
-        let report = await engine.refresh()
-        outcome = report.outcome
+        let report = inBackground
+            ? await engine.refreshInBackground(within: Self.backgroundBudget)
+            : await engine.refresh()
+        if !Task.isCancelled { outcome = report.outcome }
         apply(report.data, startedAt: mark)
-        if report.outcome == .current {
-            let window = SyncEngine.defaultWindow(today: CivilDate(clock(), in: calendar))
-            covered = covered.flatMap { Self.union($0, window) } ?? window
-        }
+        return report
     }
 
     /// The app came to the front, including at launch: refresh the clock at once and the
-    /// data unless it was tried within the last minute.
+    /// data unless it was tried within the last minute. A last try stamped in the future
+    /// (the clock moved back) does not hold the refresh off.
     func sceneDidBecomeActive() {
         tick()
-        if let last = lastRefreshAttempt, clock().timeIntervalSince(last) < Self.foregroundThrottle {
+        if let last = lastRefreshAttempt,
+            (0..<Self.foregroundThrottle).contains(clock().timeIntervalSince(last))
+        {
             return
         }
         Task { await refresh() }
     }
 
-    /// The app is leaving the front: a short fetch of the widget's days, then the final widget
-    /// reload, so the Lock Screen starts from the freshest data the app has. The full window
-    /// is not fetched here: the system can end the background time mid-fetch, and then the
-    /// reload would never run and the Lock Screen would keep the older snapshot. The cut-off
-    /// of eight seconds leaves the reload room inside the time the caller asked the system for.
+    /// The app is leaving the front: a short read of the widget's days, then a widget reload
+    /// if that changed anything, so the Lock Screen starts from the freshest data the app
+    /// has. The full refresh is not run here: the system can end the background time
+    /// mid-read, and then the reload would never run. The cut-off of eight seconds leaves the
+    /// reload room inside the time the caller asked the system for.
     func sceneDidEnterBackground() async {
         await writesFinished()
-        // A refresh that began moments ago has just written a snapshot; fetching again would
-        // only repeat it when someone flicks between apps.
-        let justTried = lastRefreshAttempt.map { clock().timeIntervalSince($0) <= 15 } ?? false
-        if !justTried {
-            _ = await engine.refreshWidgetSnapshot(maxAge: 0, deadline: .seconds(8))
-        }
-        reloadWidgets()
+        // A refresh within the foreground throttle has just written a snapshot (and asked for
+        // its reload); reading again would only repeat it.
+        let justTried = lastRefreshAttempt.map {
+            (0..<Self.foregroundThrottle).contains(clock().timeIntervalSince($0))
+        } ?? false
+        let snapshot =
+            justTried
+            ? engine.widgetSnapshot()
+            : await engine.refreshWidgetSnapshot(maxAge: 0, deadline: .seconds(8))
+        reloadWidgetsIfNeeded(snapshot)
     }
 
-    /// The `BGAppRefreshTask` body: today through eight days ahead for every visible
-    /// calendar, written to the widget's snapshot, then a widget reload. Draws nothing: the
-    /// app is not on screen, and the next launch refreshes everything. Returns whether a
-    /// snapshot is in place.
+    /// The `BGAppRefreshTask` body: the same incremental refresh as in the front, which keeps
+    /// the app's own cache and tokens current for the next launch and writes the widget's
+    /// snapshot, then a widget reload if the snapshot changed. Usually a few small calls; a
+    /// daily full read is the slow case, and the calendars' reads are spread over the day so
+    /// it rarely meets more than one. One try per request and `backgroundBudget` for the
+    /// whole refresh; when the system ends the task first it cancels this one, every request
+    /// stops, and what already answered is kept. Returns whether every account answered.
     @discardableResult
     func refreshInBackground() async -> Bool {
         guard accounts.contains(where: { !$0.signedOut }) else { return true }
-        let snapshot = await engine.refreshWidgetSnapshot(maxAge: 0, deadline: .seconds(20))
-        reloadWidgets()
-        return snapshot != nil
+        let report = await sync(inBackground: true)
+        reloadWidgetsIfNeeded(report.snapshot)
+        return report.outcome == .current
     }
 
     // MARK: The clock and the schedule
@@ -260,12 +288,24 @@ final class AppModel: CalendarStore {
             tasks.append(
                 Task { [weak self] in
                     while !Task.isCancelled {
-                        try? await Task.sleep(for: interval)
+                        // Tolerance lets the system batch the wake-up with others, which the
+                        // Mac's App Nap would otherwise do on its own terms.
+                        try? await Task.sleep(for: interval, tolerance: .seconds(20))
                         guard !Task.isCancelled, let self else { return }
                         await refresh()
                     }
                 })
         }
+
+        // The network coming back is when an `Offline` line can go away; waiting for the
+        // timer would leave it up to three minutes longer than it needs to be.
+        let monitor = NWPathMonitor()
+        monitor.pathUpdateHandler = { [weak self] path in
+            let satisfied = path.status == .satisfied
+            Task { @MainActor [weak self] in self?.networkDidChange(satisfied: satisfied) }
+        }
+        monitor.start(queue: DispatchQueue(label: "io.github.spashii.day.network"))
+        pathMonitor = monitor
 
         // A changed clock, day, zone or locale moves every time on screen.
         observe([
@@ -288,6 +328,9 @@ final class AppModel: CalendarStore {
         started = false
         tasks.forEach { $0.cancel() }
         tasks = []
+        pathMonitor?.cancel()
+        pathMonitor = nil
+        networkSatisfied = nil
         observers.forEach { NotificationCenter.default.removeObserver($0) }
         #if os(macOS)
             observers.forEach { NSWorkspace.shared.notificationCenter.removeObserver($0) }
@@ -307,12 +350,23 @@ final class AppModel: CalendarStore {
         return .milliseconds(Int(remaining * 1000) + 50)
     }
 
+    /// Refreshes when the network returns: a path that was unsatisfied is satisfied again.
+    /// The first update only records the state, since launch refreshes anyway.
+    private func networkDidChange(satisfied: Bool) {
+        defer { networkSatisfied = satisfied }
+        guard satisfied, networkSatisfied == false else { return }
+        Task { await refresh() }
+    }
+
     private func environmentDidChange() {
         // Assigning again redraws whatever reads the calendar, even though the autoupdating
         // calendar is the same value: its zone and locale are what changed.
         calendar = .autoupdatingCurrent
         derived = Derived(data: derived.data, calendar: calendar)
         tick()
+        // A new day, zone or clock moves "today", and with it the days the engine keeps
+        // current and the age the widget is timed from; a refresh puts both right at once.
+        Task { await refresh() }
     }
 
     private func observe(
@@ -368,8 +422,6 @@ final class AppModel: CalendarStore {
         }
         changes += 1
         apply(engine.load())
-        // The new account's window is the default one, whatever the Month had reached.
-        covered = SyncEngine.defaultWindow(today: CivilDate(clock(), in: calendar))
         // The list shows the account at once; its calendars and events follow.
         Task { await refresh() }
     }
@@ -383,7 +435,7 @@ final class AppModel: CalendarStore {
             pendingRemovals.remove(id)
             changes += 1
             apply(engine.load())
-            reloadWidgets()
+            reloadWidgetsIfNeeded(engine.widgetSnapshot())
         }
     }
 
@@ -430,10 +482,12 @@ final class AppModel: CalendarStore {
     // MARK: The Month's window
 
     /// Called from `events(in:)`, which views call while they draw. Starts a fetch for days
-    /// beyond the cache and returns at once; the answer arrives as new data and the view
-    /// asks again.
+    /// beyond the covered days and returns at once; the answer arrives as new data and the
+    /// view asks again. The covered days come from the engine's own record, so a daily full
+    /// read that narrows them sends the Month back for the stretch it is showing.
     private func requestWindow(_ days: ClosedRange<CivilDate>) {
-        guard let covered, windowFetch == nil, clock() >= extensionRetryAfter,
+        guard let covered = derived.data.syncedDays, windowFetch == nil,
+            clock() >= extensionRetryAfter,
             derived.data.accounts.contains(where: { !$0.signedOut })
         else { return }
         let today = CivilDate(clock(), in: calendar)
@@ -461,26 +515,27 @@ final class AppModel: CalendarStore {
             let report = await engine.extendWindow(toInclude: target)
             windowFetch = nil
             apply(report.data, startedAt: mark)
-            if report.outcome == .current {
-                self.covered = self.covered.flatMap { Self.union($0, target) } ?? target
-            } else {
+            if report.outcome != .current {
                 outcome = report.outcome
+                extensionRetryAfter = clock().addingTimeInterval(60)
+            } else if report.data.syncedDays == covered {
+                // Nothing widened (every calendar was already past it, or none is fetched
+                // yet); asking again at once would loop.
                 extensionRetryAfter = clock().addingTimeInterval(60)
             }
         }
     }
 
-    /// The two windows as one, when they touch or overlap; nil when a gap lies between.
-    static func union(_ a: ClosedRange<CivilDate>, _ b: ClosedRange<CivilDate>)
-        -> ClosedRange<CivilDate>?
-    {
-        guard a.lowerBound <= b.upperBound.adding(days: 1),
-            b.lowerBound <= a.upperBound.adding(days: 1)
-        else { return nil }
-        return min(a.lowerBound, b.lowerBound)...max(a.upperBound, b.upperBound)
-    }
-
     // MARK: Widgets
+
+    /// Reloads the widget when `snapshot` differs from the one it last reloaded for in what
+    /// it shows, or in the age its lines are timed from. Nothing on disk means nothing for the
+    /// widget to read either.
+    private func reloadWidgetsIfNeeded(_ snapshot: WidgetSnapshot?) {
+        guard let snapshot, snapshot.needsReload(after: reloadedFor) else { return }
+        reloadedFor = snapshot
+        reloadWidgets()
+    }
 
     /// Asks WidgetKit to rebuild the Lock Screen timelines from the snapshot. The Mac has no
     /// widget.

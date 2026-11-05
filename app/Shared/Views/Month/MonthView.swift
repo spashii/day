@@ -1,96 +1,129 @@
 import DayCore
 import SwiftUI
 
-/// The month: one continuous vertical scroll of week rows that snaps to rows and opens with
-/// the current week on top. One-offs that matter are bars and titled lines, routine is gray
-/// dots, today is the red numeral. Shared by the iPhone root and the Mac window; the parent
-/// supplies the title, the toolbar and what a tap on a day does.
+/// The month: one page per month holding only its own weeks. One-offs that matter are bars
+/// and titled lines, routine is gray dots, today is the red numeral.
+///
+/// On the iPhone the pages turn sideways under the weekday letters, and the selected day sits
+/// under the grid: its date line, its summary and its rows. On the Mac the page fills the
+/// window and the parent shows the selected day in its inspector. The parent supplies the
+/// title, the toolbar and what a tap on a day does.
 struct MonthView: View {
     @EnvironmentStore private var store
 
-    /// The scroll position and the shown month, owned by the parent.
-    @Bindable var scroll: MonthScroll
-    /// The Mac's selected day, tinted. The iPhone passes nil.
-    var selection: CivilDate? = nil
+    /// The page on screen, owned by the parent.
+    let scroll: MonthScroll
+    /// The selected day: ringed and listed under the iPhone grid, tinted on the Mac.
+    let selection: CivilDate
     /// The iPhone's zoom namespace, so the pushed Day grows out of its cell.
     var zoom: Namespace.ID? = nil
-    /// The iPhone draws the month's name as its large title, and a tap on it opens Go to
-    /// Date. The Mac passes nil and names the month in its window toolbar.
-    var onTitle: (() -> Void)? = nil
-    /// A tap on a day cell: the iPhone pushes the Day, the Mac selects it.
+    /// A tap on the selected day's date line under the iPhone grid: the full Day.
+    var onOpen: ((CivilDate) -> Void)? = nil
+    /// A tap on a day cell: the iPhone selects it, or opens it when it is already selected;
+    /// the Mac selects it.
     let onSelect: (CivilDate) -> Void
 
-    @State private var width: CGFloat = 0
+    /// The iPhone's height under the weekday letters, for the grid and the day together.
+    @State private var available: CGFloat = 0
+    /// The least height the loaded iPhone pages can draw their weeks in.
+    @State private var pagesNeed: CGFloat = 0
 
     var body: some View {
-        let calendar = store.calendar
-        let today = store.today
-        let weeks = scroll.weeks(today: today, calendar: calendar)
-        let current = MonthScroll.weekStart(of: today, calendar: calendar)
-
-        ScrollView {
-            LazyVStack(spacing: 0) {
-                ForEach(weeks, id: \.self) { week in
-                    WeekRow(
-                        layout: layout(week: week, calendar: calendar),
-                        today: today,
-                        columnWidth: width / 7,
-                        selection: selection,
-                        zoom: zoom,
-                        onSelect: onSelect)
-                }
+        Group {
+            if Platform.isMac {
+                macPage
+            } else {
+                phonePage
             }
-            .scrollTargetLayout()
         }
-        .scrollPosition(
-            id: Binding(
-                get: { scroll.topWeek ?? current },
-                set: { scroll.topWeek = $0 }),
-            anchor: .top
-        )
-        .scrollTargetBehavior(.viewAligned(limitBehavior: .never))
-        .onScrollTargetVisibilityChange(idType: CivilDate.self, threshold: 0.5) { weeks in
-            scroll.visibleWeeks = weeks.sorted()
-        }
-        .safeAreaBar(edge: .top, spacing: 0) {
-            VStack(alignment: .leading, spacing: Spacing.cell) {
-                if let onTitle {
-                    // Pinned with the weekday letters rather than the navigation bar's own
-                    // large title: the month opens scrolled to this week, not to the top of
-                    // its content, so a navigation bar title would start collapsed, and this
-                    // one changes as the weeks scroll under it.
-                    Button(action: onTitle) {
-                        Text(verbatim: scroll.title(today: today, now: store.now, calendar: calendar))
-                            .font(.largeTitle)
-                            .fontWeight(.bold)
-                            .foregroundStyle(.primary)
-                            .lineLimit(1)
-                    }
-                    .buttonStyle(.plain)
-                    .scenePadding(.horizontal)
-                    .accessibilityAddTraits(.isHeader)
-                    .accessibilityHint(Text("Go to date"))
-                }
-                WeekdayHeader(calendar: calendar)
-            }
-            // Opaque, so the week scrolling up never shows through the title or the status
-            // bar: a translucent bar blurs it instead of cutting it off. On the Mac the
-            // fill stops at the toolbar, which draws its own.
-            .background(.background, ignoresSafeAreaEdges: Platform.isMac ? [] : .top)
-        }
-        .scrollEdgeEffectStyle(.hard, for: .top)
-        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
-        // Larger text belongs to the Day list; the grid has one layout and stops growing here.
-        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
     }
 
-    private func layout(week: CivilDate, calendar: Calendar) -> WeekLayout {
-        WeekLayout(
-            start: week,
-            events: store.events(in: week...week.adding(days: 6)),
-            calendar: calendar,
-            maxLanes: Platform.isMac ? nil : 2,
-            mark: { store.monthMark($0) })
+    // MARK: iPhone
+
+    /// The grid takes two thirds of the height under the weekday letters, the selected day the
+    /// rest, so a six-week month still leaves the summary and the first rows in view. Every
+    /// month gets the same grid height, so the day stays put while the pages turn. At the
+    /// largest text sizes the grid grows to what its pages need, up to three quarters.
+    private var gridHeight: CGFloat {
+        let share = min(max(available * 2 / 3, 6 * Self.minPhoneRow), 6 * Self.maxPhoneRow)
+        return max(share, min(pagesNeed, available * 3 / 4))
+    }
+
+    /// The grid stays between six rows of 64 and six rows of 96 points, so a small iPhone
+    /// keeps a usable month and a large one does not hand the grid room the day could use.
+    private static let minPhoneRow: CGFloat = 64
+    private static let maxPhoneRow: CGFloat = 96
+
+    private var phonePage: some View {
+        let calendar = store.calendar
+        let today = store.today
+        return VStack(spacing: 0) {
+            ScrollView(.horizontal) {
+                LazyHStack(spacing: 0) {
+                    ForEach(scroll.months(today: today), id: \.self) { month in
+                        MonthGrid(
+                            month: month, height: gridHeight, selection: selection, zoom: zoom,
+                            onSelect: onSelect)
+                            .containerRelativeFrame(.horizontal)
+                    }
+                }
+                .scrollTargetLayout()
+            }
+            .scrollTargetBehavior(.paging)
+            .scrollPosition(
+                id: Binding(
+                    get: { scroll.shown(today: today) },
+                    set: { month in
+                        if let month { scroll.turn(to: month, calendar: calendar) }
+                    })
+            )
+            .scrollIndicators(.hidden)
+            // A pinned header over a dense grid is the case the hard edge is for: the
+            // weekday letters stay legible over the bars of a turning page.
+            .scrollEdgeEffectStyle(.hard, for: .top)
+            .frame(height: gridHeight)
+            .onPreferenceChange(MonthGridLeast.self) { need in
+                MainActor.assumeIsolated { pagesNeed = need }
+            }
+            // Larger text belongs to the Day list; the grid has one layout and stops here.
+            .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+            Divider()
+            // A ZStack, so the outgoing day fades out where the incoming one fades in rather
+            // than the two stacking for the length of the fade.
+            ZStack {
+                MonthDayPane(day: selection) { onOpen?(selection) }
+                    .id(selection)
+                    .transition(.opacity)
+            }
+            .frame(maxHeight: .infinity, alignment: .top)
+        }
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { available = $0 }
+        // The weekday letters under the system's title bar. No background of their own: the
+        // bar's scroll edge is what keeps them apart from the grid.
+        .safeAreaBar(edge: .top, spacing: 0) {
+            WeekdayHeader(calendar: calendar)
+                .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+        }
+    }
+
+    // MARK: Mac
+
+    /// One page filling the window under the weekday letters. It scrolls only when a busy
+    /// month in a short window needs more than the window has.
+    private var macPage: some View {
+        let month = scroll.shown(today: store.today)
+        return VStack(spacing: 0) {
+            WeekdayHeader(calendar: store.calendar)
+            ViewThatFits(in: .vertical) {
+                MonthGrid(month: month, selection: selection, onSelect: onSelect)
+                ScrollView {
+                    MonthGrid(month: month, selection: selection, onSelect: onSelect)
+                }
+                .scrollEdgeEffectStyle(.hard, for: .top)
+            }
+            .frame(maxHeight: .infinity, alignment: .top)
+        }
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
     }
 }
 
@@ -122,9 +155,10 @@ struct WeekdayHeader: View {
     @Previewable @State var scroll = MonthScroll()
     let store = PreviewStore.make()
     NavigationStack {
-        MonthView(scroll: scroll, onTitle: {}) { _ in }
+        MonthView(scroll: scroll, selection: store.today) { _ in }
+            .navigationTitle(scroll.title(today: store.today, now: store.now, calendar: store.calendar))
         #if os(iOS)
-            .toolbarVisibility(.hidden, for: .navigationBar)
+            .navigationBarTitleDisplayMode(.inline)
         #endif
     }
     .calendarStore(store)
@@ -134,7 +168,7 @@ struct WeekdayHeader: View {
     @Previewable @State var scroll = MonthScroll()
     let store = PreviewStore.make()
     NavigationStack {
-        MonthView(scroll: scroll) { _ in }
+        MonthView(scroll: scroll, selection: store.today.adding(days: 2)) { _ in }
             .navigationTitle(scroll.title(today: store.today, now: store.now, calendar: store.calendar))
     }
     .calendarStore(store)

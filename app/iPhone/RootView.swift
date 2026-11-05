@@ -2,9 +2,10 @@ import DayCore
 import SwiftUI
 
 /// The iPhone app: a `NavigationStack` with the Month at the root and today's Day pushed on
-/// launch, so the back chevron reads the month and launch lands on today. The Day zooms out
-/// of its Month cell. First run, the Calendars sheet, Go to Date and the widget's links all
-/// start here.
+/// launch, so the back chevron reads the month and launch lands on today. The Month lists its
+/// selected day under the grid; a second tap on that day opens its Day, which zooms out of
+/// the cell. First run, the Calendars sheet, Go to Date, the event sheet and the widget's
+/// links all start here.
 ///
 /// It handles `day://day/<date>` and `day://event/<account>/<calendar>/<event>` itself, so a
 /// widget tap works with no wiring in the app entry point.
@@ -13,12 +14,13 @@ struct RootView: View {
 
     @State private var path: [CivilDate] = []
     @State private var scroll = MonthScroll()
+    /// The day listed under the month grid; nil follows today, so it moves on at midnight.
+    @State private var chosenDay: CivilDate?
     @State private var launched = false
     @State private var firstRun = false
-    @State private var showsCalendars = false
-    @State private var showsGoToDate = false
-    /// The event a widget link opened, shown over whichever day is underneath.
-    @State private var linkedEvent: Event?
+    /// The one sheet on screen. A single `sheet(item:)` holds them all, so a widget link that
+    /// arrives over Calendars, Go to Date or another event replaces that sheet with its own.
+    @State private var sheet: RootSheet?
     /// Bumped by a link, so the Day pager restarts on the linked day even when the stack
     /// already shows a page of the same push.
     @State private var pagerToken = 0
@@ -39,55 +41,101 @@ struct RootView: View {
             if needs { firstRun = true }
         }
         .onOpenURL(perform: open)
-        .sheet(item: $linkedEvent) { event in
-            EventSheet(event: event)
+        .sheet(item: $sheet) { sheet in
+            sheetContent(sheet)
                 .calendarStore(store)
         }
+        .environment(\.presentEvent, PresentEventAction { event, zoom in
+            sheet = .event(event, zoom: zoom)
+        })
+    }
+
+    @ViewBuilder
+    private func sheetContent(_ sheet: RootSheet) -> some View {
+        let today = store.today
+        let calendar = store.calendar
+        switch sheet {
+        case .calendars:
+            CalendarsSheet()
+        case .goToDate:
+            GoToDateSheet(initial: scroll.goToDateStart(today: today, calendar: calendar)) { day in
+                select(day)
+                scroll.show(day, today: today, calendar: calendar)
+            }
+        case .event(let event, let zoom):
+            if let zoom {
+                EventSheet(event: event)
+                    .navigationTransition(.zoom(sourceID: event.id, in: zoom))
+            } else {
+                EventSheet(event: event)
+            }
+        }
+    }
+
+    /// The day the month lists and rings.
+    private var selectedDay: CivilDate {
+        chosenDay ?? store.today
     }
 
     private var stack: some View {
         let today = store.today
         let calendar = store.calendar
-        let calendarsBinding = $showsCalendars
         return NavigationStack(path: $path) {
-            MonthView(scroll: scroll, zoom: zoom, onTitle: { showsGoToDate = true }) { day in
-                path.append(day)
+            MonthView(
+                scroll: scroll, selection: selectedDay, zoom: zoom,
+                onOpen: { path.append($0) }
+            ) { day in
+                if day == selectedDay {
+                    path.append(day)
+                } else {
+                    withAnimation { select(day) }
+                }
             }
-            // The month draws its own large title above the weekday letters, so the root's
-            // navigation bar is hidden: a bar left in place keeps its soft edge and the week
-            // scrolling up shows through it. The navigation title stays set for the back
-            // button and the app switcher.
+            // The system bar names the page's month. Inline, because the month itself does
+            // not scroll: a large title would never collapse and would take the height the
+            // selected day needs, and a title collapsing with the day's list would resize the
+            // grid under the finger. The title also names the back button on the Day.
             .navigationTitle(scroll.title(today: today, now: store.now, calendar: calendar))
-            .toolbarVisibility(.hidden, for: .navigationBar)
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .bottomBar) {
                     Button("Today") {
-                        withAnimation { scroll.show(today, today: today, calendar: calendar) }
+                        withAnimation {
+                            select(today)
+                            scroll.show(today, today: today, calendar: calendar)
+                        }
                     }
+                }
+                // Text and a symbol in one capsule read as one action, so they stand apart.
+                ToolbarSpacer(.fixed, placement: .bottomBar)
+                ToolbarItem(placement: .bottomBar) {
+                    Button("Go to Date…", systemImage: "calendar") { sheet = .goToDate }
                 }
                 ToolbarSpacer(.flexible, placement: .bottomBar)
                 ToolbarItem(placement: .bottomBar) {
-                    Button("Calendars") { showsCalendars = true }
+                    Button("Calendars") { sheet = .calendars }
                 }
             }
-            .refreshable { await store.refresh() }
+            // A page turned by a swipe lists today when it holds today, else its first day.
+            // A jump that already picked a day in the new month (Today, Go to Date, a widget
+            // link) keeps it.
+            .onChange(of: scroll.page) { _, page in
+                guard let page, MonthScroll.firstOfMonth(selectedDay) != page else { return }
+                withAnimation {
+                    select(MonthScroll.firstOfMonth(today) == page ? today : page)
+                }
+            }
             .navigationDestination(for: CivilDate.self) { day in
                 DayPager(start: day)
                     .id(pagerToken)
                     .modifier(ZoomFromCell(day: day, namespace: zoom))
             }
         }
-        .sheet(isPresented: $showsCalendars) {
-            CalendarsSheet()
-                .calendarStore(store)
-        }
-        .sheet(isPresented: $showsGoToDate) {
-            GoToDateSheet(initial: scroll.goToDateStart(today: today, calendar: calendar)) { day in
-                scroll.show(day, today: today, calendar: calendar)
-            }
-            .calendarStore(store)
-        }
-        .environment(\.chooseCalendars, ChooseCalendarsAction { calendarsBinding.wrappedValue = true })
+        .environment(\.chooseCalendars, ChooseCalendarsAction { sheet = .calendars })
+    }
+
+    private func select(_ day: CivilDate) {
+        chosenDay = day == store.today ? nil : day
     }
 
     /// Lands on today with no push animation: the stack is built for the first time with
@@ -116,10 +164,32 @@ struct RootView: View {
     /// cache, so a link to an event no longer there lands on today.
     private func open(_ url: URL) {
         guard !firstRun, let route = store.route(for: url) else { return }
+        let day = route.day(in: store)
         pagerToken += 1
-        path = [route.day(in: store)]
+        // Back from the linked Day lands on its month with that day listed.
+        select(day)
+        scroll.show(day, today: store.today, calendar: store.calendar)
+        path = [day]
         if case .event(let event) = route {
-            linkedEvent = event
+            sheet = .event(event, zoom: nil)
+        } else {
+            sheet = nil
+        }
+    }
+}
+
+/// The root's sheets, one at a time.
+private enum RootSheet: Identifiable {
+    case calendars
+    case goToDate
+    /// An event from a row, which zooms out of it, or from a widget link, which has no row.
+    case event(Event, zoom: Namespace.ID?)
+
+    var id: String {
+        switch self {
+        case .calendars: "calendars"
+        case .goToDate: "go-to-date"
+        case .event(let event, _): "event-\(event.id)"
         }
     }
 }

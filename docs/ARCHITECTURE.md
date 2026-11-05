@@ -10,14 +10,14 @@ Core/                       Swift package, Foundation only
   Sources/DayCore/
     Model/                  the types every target shares
     Google/                 OAuth with PKCE, token store protocol, Calendar API client, decoding
-    Sync/                   fetch window, cache files, widget snapshot file
+    Sync/                   incremental sync with Google's tokens, cache files, the widget's read (docs/SYNC.md)
     Rules/                  pure functions from events to marks, rows and text
   Sources/day-cli/          prints a fixture's days through the rules
   Tests/DayCoreTests/
     Fixtures/               invented-week.json and recorded Google responses (all invented)
 app/
   project.yml               XcodeGen: DayMac, DayPhone, DayWidget
-  Shared/Model/             CalendarStore, FixtureStore, AppModel, KeychainTokenStore, Routes, Colors
+  Shared/Model/             CalendarStore, FixtureStore, AppModel, KeychainTokenStore, Routes, Colors, CalendarSymbols
   Shared/Views/             Month, Day, Event, Accounts, States; used by both apps
   Shared/Resources/         Localizable.xcstrings
   iPhone/                   iPhone entry point and shell
@@ -25,7 +25,8 @@ app/
   Widget/                   the Lock Screen widget "Next"
   AppIcon.icon              Icon Composer icon, picked up by project.yml when present
   PrivacyInfo.xcprivacy     privacy manifest, picked up when present
-tools/                      sync.sh, build.sh, test.sh, release scripts
+tools/                      sync.sh, build.sh, test.sh, screenshots.sh, release scripts
+docs/                       ARCHITECTURE.md (this map), SYNC.md (sync, cache files, the widget's read), DEVELOPMENT.md
 ```
 
 Generated files stay out of git: `app/Day.xcodeproj`, every `Info.plist` and `.entitlements` under `app/`, and `build/`. `app/project.yml` is the only place their contents are written.
@@ -54,11 +55,13 @@ Simulator builds are signed to run locally (no Apple account needed). That signa
 - `EventTime`: `.allDay(start:endExclusive:)` or `.timed(start:end:authoredZone:)`, with `start(in:)`, `end(in:)` and `interval(in:)`.
 - `EventKind` (Google's `eventType`), `EventStatus`, `Response` (`none` means no guest list; compare optionals against `Response.none` explicitly).
 - `EventID(calendar:googleID:)`. `Event { id, iCalUID, originalStart, title, time, kind, status, isRecurring, response, isOrganizer, attendeeCount, attendeeDomains, isFree, location, joinURL, htmlLink, description, colorKey, calendars }`. `attendeeDomains` holds the guests' email domains except the account holder's own address and rooms; month rule 4 needs it to tell outside guests from colleagues. `description` is plain text. Missing keys decode to defaults, so a cache written before a field existed still loads.
+- `CalendarSymbol { name, label }`: one of the 30 SF Symbols a calendar can wear (`all`, `named(_:)`), a closed set that exists on every supported system. `CalendarSymbolMap`: the person's choices by `CalendarID`, stored as sorted pairs in `calendar-symbols.json` (never in Google), with `symbol(for:)` for a calendar or an event, `nextEventSymbol(events:now:calendar:)`, `set`, `forget(_:)` and `read(from:)` / `write(to:)` on a `CacheDirectory`. A stored name outside the set reads as no symbol.
 - `ColorKey`: the 13 system colors. `ColorKey(hex:)` maps Google's hex by hue, with low chroma to gray and dark muted oranges to brown. Decoding uses it for events; the accounts list uses it for calendars. `Colors.swift` in the app turns a key into a SwiftUI `Color`.
 - Rule results (`RuleOutputs.swift`): `MonthMark`, `Summary { first, second }`, `NextEvents { current, next }`, `DayRow`, `WidgetEntry`, `RectangularLines`, `WhenLine`, `CircularContent`, `MenuBarLabel`.
 - `WidgetSnapshot { fetchedAt, accountCount, signedOutAccounts, events }` (`Snapshot.swift`), the contents of `widget-snapshot.json`. Sync reads and writes the file (atomic replace, newer `fetchedAt` wins) in extensions of this type; it is declared once, here.
 - `DayLink`: `day://day/<yyyy-mm-dd>` and `day://event/<sub>/<calendar>/<event>`, every component percent-encoded because calendar IDs carry `#`, `@` and `+`. The widget builds these and the app's `onOpenURL` parses them with the same type.
 - `DayIdentifiers`: bundle IDs, App Group, URL scheme, widget kind, keychain service, refresh task, the client ID key and its placeholder.
+- The shared folder (the App Group on iPhone, `~/Library/Application Support/Day/` on the Mac) holds `accounts.json`, and per account `calendars-<sub>.json`, `events-<sub>.json`, `sync-<sub>.json` (the sync tokens, written after the events) and `near-<sub>.json` (yesterday through ten days ahead, written last, the only events file the widget decodes), then `calendar-symbols.json` and `widget-snapshot.json`. `docs/SYNC.md` says who writes each, in what order, and why.
 - `DayJSON`: the one encoder and decoder (ISO 8601 dates, sorted keys) for fixtures, cache files and the snapshot.
 - `Fixture { timeZone, locale, now, fetchedAt, accounts, calendars, events }` with `load(from:)` and `calendar`.
 
@@ -83,7 +86,7 @@ enum Formatting  // count words, times, durations, day and month titles, event s
 What each shape carries, where it is not obvious:
 
 - `merged` keeps input order as the last tiebreak, so pass events in account order, first-added account first.
-- `monthMark` takes the reader's `Calendar`, because whether a timed event covers a second day (it must run past 05:00 there) depends on the zone. Rule 5, short internal one-offs as dots, is the single branch at the end of the function; deleting it titles them.
+- `monthMark` takes the reader's `Calendar`, because whether a timed event covers a second day (it must run past 05:00 there) depends on the zone. Rule 5, short internal one-offs as dots, is confirmed and is the single branch at the end of the function, so the month's density has one place to change.
 - `summarize` and `dayRows` want the day's events plus the next day's, which sentence two may name. `CalendarStore.dayEvents(_:)` returns exactly that.
 - `DayRow` has `allDay(Event, position:)`, `allDayMore(String)` for `2 more`, `earlier([Event])` (its text is `Formatting.earlier`), `nowLine(Date)`, `event(Event, secondLine:showsJoin:)` and `gap(String, start:)`. Its `id` is stable across minutes, so the `List` animates inserts and removals only.
 - `WidgetEntry.url` is the inline and circular tap (today); `RectangularLines.url` is the rectangular tap (the event sheet). `WhenLine` carries the clock text, the start to render with `.reference(to:)` when within the hour, and the Always-On form. Line 3 is `RectangularLines.after`.
@@ -115,6 +118,8 @@ What each shape carries, where it is not obvious:
 
 Signed-out accounts, no accounts and all calendars hidden are read from `accounts` and visibility (`signedOutAccounts`, `needsFirstRun`, `allCalendarsHidden`), because they can hold alongside any fetch status. Views take the store from the environment, pass `store.calendar` and `store.now` to the rules, and set the `calendar` and `timeZone` environment from the store, so times read the same in previews, screenshots and on device. Sign-in takes the view's `webAuthenticationSession`, so the store needs no window.
 
+`CalendarSymbols` (`app/Shared/Model/CalendarSymbols.swift`) is the observable store over `CalendarSymbolMap`: `CalendarSymbols.shared` reads the file in the shared folder, writes it on every change and asks WidgetKit to reload the Next widget on iPhone. Views read it with `@EnvironmentSymbols`, which is the shared store unless `.calendarSymbols(_:)` hands one in, so previews and screenshots use an in-memory `CalendarSymbols([...])` and write nothing. The widget does not link the store: on each reload `NextProvider` reads the same file with `CalendarSymbolMap.read(from:)` and puts each entry's `NextSymbol` (name and VoiceOver label) on its `NextEntry`, resolved from the same events and `nextEvents` rule as the entry's text, so with no symbol chosen it reads one small file and nothing else. Both apps and the widget check that the system can draw a symbol before showing it and fall back to the color dot.
+
 `AppModel` is the real store over Google. `FixtureStore` serves `invented-week.json`. `FixtureStore.fromLaunchArguments()` returns a fixture store when `-UseFixtures` is passed or no Google client is configured, else nil:
 
 - `-UseFixtures invented-week`: the fixture by name, from the app bundle.
@@ -135,7 +140,7 @@ Signed-out accounts, no accounts and all calendars hidden are read from `account
 | Sat 7 Nov | Dentist 14:30, Dinner with Maya 19:00 |
 | Sun 8 Nov | A birthday and nothing else |
 | Mon 9 to Thu 12 Nov | A one-off out of office until Friday; recurring meetings declined; Board call Monday 15:00 kept on; Sint Maarten on Wednesday |
-| Later | Coffee with Ana, a short internal check-in, Quarterly planning (three hours), Berlin (three days), Team offsite on the hidden calendar, a cancelled instance, Sinterklaas |
+| Later | Coffee with Ana, a short internal check-in, Quarterly planning (three hours), Berlin (three days), Copenhagen (28 November to 2 December, so a bar crosses the month's edge), Team offsite on the hidden calendar, a cancelled instance, Sinterklaas |
 
 The fixture lists events as each account's fetch returns them: the Investor call appears twice until `merged` folds it.
 
@@ -158,9 +163,11 @@ System components, SF Pro text styles, system colors and SF Symbols only. Zero `
 
 ## Screenshots
 
-`tools/screenshots.sh` pictures every screen the product has, on the invented week, in light and dark, and writes an `index.html` beside them. Parts can run alone: `iphone`, `lock`, `widget`, `mac`.
+`tools/screenshots.sh` pictures every screen the product has, on the invented week, in light and dark, and writes an `index.html` beside them, with what changed most recently first. Parts can run alone: `iphone`, `access`, `lock`, `widget`, `mac`, `icon`.
 
-- `iphone`: the app in its own simulator (`DAY_SIM`, default `day-shots`, an iPhone 17 on iOS 27.2), launched with `-UseFixtures`, `-Now` and `-FixtureState` and driven by AXe through accessibility labels. The status bar shows the same clock as `-Now`.
-- `lock`: the three "Next" families added through the Lock Screen's own widget gallery, once per simulator. The widget reads the real clock and, while the client ID is the placeholder, the invented week moved to today, so its text is that week at this hour in Amsterdam.
+- `iphone`: the app in its own simulator (`DAY_SIM`, default `day-shots`, an iPhone 17 on iOS 27.2), launched with `-UseFixtures`, `-Now` and `-FixtureState` and driven by AXe through accessibility labels. The status bar shows the same clock as `-Now`. Symbols are chosen through the app's own picker at the end of each pass and removed after.
+- `access`: the same app at the largest accessibility text size and with Increase Contrast. The simulator has no switch for Reduce Transparency or the glass slider.
+- `icon`: `app/AppIcon.icon` rendered by Icon Composer's `ictool` in its six appearances.
+- `lock`: the three "Next" families added through the Lock Screen's own widget gallery, once per simulator, with symbols on both accounts' main calendars chosen through the app first, which is what makes WidgetKit reload. The widget reads the real clock and, while the client ID is the placeholder, the invented week moved to today, so its text is that week at this hour in Amsterdam.
 - `widget` and `mac` build `tools/shots/project.yml`, two renderers that compile the app's own view files and nothing new: `DayWidgetShots` draws the widget's views at the six times of the brief's table and in every state, including Always-On; `DayMacShots` draws the window, a popover, Go to Date, the menu bar label and panel and both Settings tabs into windows placed off every screen, so it runs on a locked Mac and shows nothing on the desktop. Glass and the window server's vibrancy are missing from those pictures: the day pane is drawn again on a flat ground, and switches and tinted text buttons draw in their inactive gray because the renderer is never the active app.
 
