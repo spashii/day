@@ -110,6 +110,10 @@ public struct Event: Codable, Hashable, Identifiable, Sendable {
     /// Lowercased email domains of every guest except the account holder and rooms, unique
     /// and sorted. Month rule 4 titles a one-off when one differs from the account's domain.
     public var attendeeDomains: [String]
+    /// Google's guest list as it came, rooms and the account holder included, in Google's
+    /// order. Empty with no guest list, and in a cache written before guests were kept, which
+    /// the next full read replaces (`CacheFormat`). The event sheet draws it through `guests`.
+    public var attendees: [Attendee]
     /// Google's `transparency` is `transparent`: shown as free, never a widget candidate.
     public var isFree: Bool
     /// Google's `location` as written; may be a place, an address or a URL.
@@ -139,6 +143,7 @@ public struct Event: Codable, Hashable, Identifiable, Sendable {
         isOrganizer: Bool = false,
         attendeeCount: Int = 0,
         attendeeDomains: [String] = [],
+        attendees: [Attendee] = [],
         isFree: Bool = false,
         location: String? = nil,
         joinURL: URL? = nil,
@@ -159,6 +164,7 @@ public struct Event: Codable, Hashable, Identifiable, Sendable {
         self.isOrganizer = isOrganizer
         self.attendeeCount = attendeeCount
         self.attendeeDomains = attendeeDomains
+        self.attendees = attendees
         self.isFree = isFree
         self.location = location
         self.joinURL = joinURL
@@ -190,6 +196,11 @@ public struct Event: Codable, Hashable, Identifiable, Sendable {
         attendeeCount > 1
     }
 
+    /// The event sheet's guest list; nil when fewer than two people are listed.
+    public var guests: GuestList? {
+        GuestList(attendees)
+    }
+
     // Optional keys default, so the fixture stays short and a cache written before a key
     // existed still loads instead of forcing a full refetch.
     public init(from decoder: any Decoder) throws {
@@ -211,6 +222,7 @@ public struct Event: Codable, Hashable, Identifiable, Sendable {
         isOrganizer = try c.decodeIfPresent(Bool.self, forKey: .isOrganizer) ?? false
         attendeeCount = try c.decodeIfPresent(Int.self, forKey: .attendeeCount) ?? 0
         attendeeDomains = try c.decodeIfPresent([String].self, forKey: .attendeeDomains) ?? []
+        attendees = try c.decodeIfPresent([Attendee].self, forKey: .attendees) ?? []
         isFree = try c.decodeIfPresent(Bool.self, forKey: .isFree) ?? false
         location = try c.decodeIfPresent(String.self, forKey: .location)
         joinURL = try c.decodeIfPresent(URL.self, forKey: .joinURL)

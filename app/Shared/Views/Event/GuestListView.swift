@@ -1,0 +1,136 @@
+import DayCore
+import SwiftUI
+
+#if os(macOS)
+    import AppKit
+#else
+    import UIKit
+#endif
+
+/// The guests line of the event sheet and the people under it: `5 guests: 3 yes, 1 no, 1
+/// awaiting`, then the organizer, you and the rest, each with their answer as a small symbol.
+/// More than eight show the first eight and `Show All`, which opens the rest in place.
+/// Clicking or tapping a guest copies their address to the pasteboard; nothing here writes
+/// mail, answers for anyone or reaches Google.
+struct GuestListView: View {
+    let list: GuestList
+    @State private var showingAll = false
+    @State private var copies = 0
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.row) {
+            Text(verbatim: list.summary)
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(list.shown(all: showingAll)) { row in
+                    GuestRowView(row: row) {
+                        GuestPasteboard.copy(row.email)
+                        copies += 1
+                    }
+                }
+            }
+            if list.isLong && !showingAll {
+                Button("Show All") {
+                    withAnimation { showingAll = true }
+                }
+                .buttonStyle(.borderless)
+            }
+        }
+        .sensoryFeedback(.success, trigger: copies)
+    }
+}
+
+/// One guest: the answer's symbol, the name, and Organizer or Optional after it in the
+/// secondary color. VoiceOver reads it as one element, name then answer then the marks, and
+/// the symbol is decoration. A guest with no address has nothing to copy and is plain text.
+struct GuestRowView: View {
+    @Environment(\.dynamicTypeSize) private var typeSize
+    let row: GuestList.Row
+    let copy: () -> Void
+
+    var body: some View {
+        if row.email.isEmpty {
+            content
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(row.spoken)
+        } else {
+            Button(action: copy) {
+                content
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(row.spoken)
+        }
+    }
+
+    private var content: some View {
+        HStack(alignment: .firstTextBaseline, spacing: Spacing.cell) {
+            Image(systemName: row.answer.symbolName)
+                .foregroundStyle(.secondary)
+                .frame(width: 20)
+                .accessibilityHidden(true)
+            Text(verbatim: row.name)
+                .lineLimit(typeSize.isAccessibilitySize ? nil : 1)
+            if !row.marks.isEmpty {
+                Text(verbatim: row.marks.joined(separator: " · "))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(typeSize.isAccessibilitySize ? nil : 1)
+                    .layoutPriority(1)
+            }
+            Spacer(minLength: 0)
+        }
+        .font(.subheadline)
+        // A finger needs 44 points; a pointer does not.
+        .frame(minHeight: Platform.isMac ? 24 : 44, alignment: .leading)
+        .contentShape(.rect)
+    }
+}
+
+extension GuestAnswer {
+    /// Outline symbols that differ in shape, not only in color, drawn monochrome like the
+    /// calendar symbols on the rows.
+    var symbolName: String {
+        switch self {
+        case .yes: "checkmark.circle"
+        case .no: "xmark.circle"
+        case .maybe: "questionmark.circle"
+        case .awaiting: "circle.dotted"
+        }
+    }
+}
+
+/// The system pasteboard, a guest's address only.
+enum GuestPasteboard {
+    static func copy(_ text: String) {
+        #if os(macOS)
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(text, forType: .string)
+        #else
+            UIPasteboard.general.string = text
+        #endif
+    }
+}
+
+#Preview("Guests, six") {
+    let list = GuestList([
+        Attendee(email: "ines@harbor.example", displayName: "Ines Vos", isOrganizer: true, response: .accepted),
+        Attendee(email: "you@acme.com", displayName: "Sam", isSelf: true, response: .needsAction),
+        Attendee(email: "tom@acme.com", displayName: "Tom Berg", response: .accepted),
+        Attendee(email: "priya@acme.com", displayName: "Priya Rao", response: .declined),
+        Attendee(email: "maya@harbor.example", isOptional: true, response: .tentative),
+        Attendee(email: "lobby@resource.calendar.google.com", displayName: "Lobby", isResource: true, response: .accepted),
+    ])!
+    GuestListView(list: list)
+        .frame(width: 320, alignment: .leading)
+        .padding()
+}
+
+#Preview("Guests, eleven") {
+    let list = GuestList(
+        (1...11).map {
+            Attendee(
+                email: "guest\($0)@harbor.example", displayName: "Guest \($0)",
+                isOrganizer: $0 == 1, response: $0 % 3 == 0 ? .needsAction : .accepted)
+        })!
+    GuestListView(list: list)
+        .frame(width: 320, alignment: .leading)
+        .padding()
+}

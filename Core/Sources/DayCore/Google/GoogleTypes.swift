@@ -97,17 +97,25 @@ public struct GoogleEvent: Decodable, Hashable, Sendable {
     /// An attendee or the organizer.
     public struct Person: Decodable, Hashable, Sendable {
         public var email: String?
+        public var displayName: String?
+        /// The attendee entry of the event's organizer.
+        public var isOrganizer: Bool?
         /// This entry is the calendar the copy sits on, which for his own calendars is him.
         public var isSelf: Bool?
         /// A room or other resource, not a person.
         public var resource: Bool?
+        /// An optional guest.
+        public var isOptional: Bool?
         /// `needsAction`, `declined`, `tentative` or `accepted`.
         public var responseStatus: String?
 
         enum CodingKeys: String, CodingKey {
             case email
+            case displayName
+            case isOrganizer = "organizer"
             case isSelf = "self"
             case resource
+            case isOptional = "optional"
             case responseStatus
         }
     }

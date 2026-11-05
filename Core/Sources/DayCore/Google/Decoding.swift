@@ -118,6 +118,7 @@ public enum GoogleDecoding {
             isOrganizer: google.organizer?.isSelf == true,
             attendeeCount: people.count,
             attendeeDomains: Set(others.compactMap { domain($0.email) }).sorted(),
+            attendees: (google.attendees ?? []).compactMap(attendee),
             isFree: google.transparency == "transparent",
             location: nonEmpty(google.location?.trimmingCharacters(in: .whitespacesAndNewlines)),
             joinURL: joinURL(google),
@@ -182,6 +183,18 @@ public enum GoogleDecoding {
         case "tentative": .tentative
         default: .needsAction
         }
+    }
+
+    /// One guest-list entry as the model keeps it, or nil for an entry with neither an
+    /// address nor a name, which the sheet could not draw.
+    static func attendee(_ person: GoogleEvent.Person) -> Attendee? {
+        let email = person.email?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let name = nonEmpty(person.displayName?.trimmingCharacters(in: .whitespacesAndNewlines))
+        guard !email.isEmpty || name != nil else { return nil }
+        return Attendee(
+            email: email, displayName: name, isOrganizer: person.isOrganizer == true,
+            isSelf: person.isSelf == true, isResource: isRoom(person),
+            isOptional: person.isOptional == true, response: response(person.responseStatus))
     }
 
     static func isRoom(_ person: GoogleEvent.Person) -> Bool {

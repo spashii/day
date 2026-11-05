@@ -2,10 +2,10 @@ import DayCore
 import SwiftUI
 
 /// The event, in nine lines, each only when it has content: title; when, with the authored
-/// zone when its offset differs; `Repeats`; Join; the place; guests and his answer; the
-/// calendars it sits on; the description; `Open in Google Calendar`. The iPhone shows it in a
-/// sheet, the Mac in a popover. Nothing here edits, answers or lists guests: that is Google
-/// Calendar's, one tap away.
+/// zone when its offset differs; `Repeats`; Join; the place; the guests with their answers
+/// (`GuestListView`); the calendars it sits on; the description; `Open in Google Calendar`.
+/// The iPhone shows it in a sheet, the Mac in a popover. Nothing here edits or answers:
+/// that is Google Calendar's, one tap away.
 struct EventDetail: View {
     @EnvironmentStore private var store
     @EnvironmentSymbols private var symbols
@@ -46,7 +46,10 @@ struct EventDetail: View {
             }
 
             let place = Formatting.place(event)
-            let guests = Formatting.guests(event)
+            let guests = event.guests
+            // Events saved before guests were kept have a count and no list until the next
+            // refresh reads them again; they keep the line they had.
+            let countOnly = event.attendees.isEmpty ? Formatting.guests(event) : nil
             VStack(alignment: .leading, spacing: Spacing.cell) {
                 if let place, let maps = mapsURL {
                     Button {
@@ -58,7 +61,9 @@ struct EventDetail: View {
                     .buttonStyle(.borderless)
                 }
                 if let guests {
-                    Text(verbatim: guests)
+                    GuestListView(list: guests)
+                } else if let countOnly {
+                    Text(verbatim: countOnly)
                 }
                 ForEach(event.calendars, id: \.self) { id in
                     calendarLine(id)

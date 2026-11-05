@@ -147,6 +147,34 @@
     "acme.com",
     "harbor.example"
    ],
+   "attendees": [
+    {
+     "email": "ines@harbor.example",
+     "isOrganizer": true,
+     "response": "accepted"
+    },
+    {
+     "email": "tom@harbor.example",
+     "response": "accepted"
+    },
+    {
+     "email": "you@gmail.com",
+     "isSelf": true
+    },
+    {
+     "email": "priya@acme.com",
+     "response": "accepted"
+    },
+    {
+     "email": "you@acme.com"
+    },
+    {
+     "displayName": "Boardroom",
+     "email": "c_1888boardroom@resource.calendar.google.com",
+     "isResource": true,
+     "response": "accepted"
+    }
+   ],
    "colorKey": "purple",
    "description": "Q4 numbers and the seed extension.\nDeck: https://harbor.example/deck/q4",
    "htmlLink": "https://www.google.com/calendar/event?eid=N2hxMms0aW52ZXN0b3IwNCB5b3VAZ21haWwuY29t",
@@ -895,6 +923,21 @@
     "acme.com",
     "northwind.example"
    ],
+   "attendees": [
+    {
+     "email": "priya@acme.com",
+     "isOrganizer": true,
+     "response": "accepted"
+    },
+    {
+     "email": "you@acme.com",
+     "isSelf": true,
+     "response": "tentative"
+    },
+    {
+     "email": "ana@northwind.example"
+    }
+   ],
    "colorKey": "orange",
    "htmlLink": "https://www.google.com/calendar/event?eid=b2ZmaWNlaHJzOGNfMjAyNjExMDNUMTUwMDAwWiB5b3VAYWNtZS5jb20",
    "iCalUID": "officehrs8c@google.com",
@@ -950,6 +993,37 @@
    "attendeeCount": 7,
    "attendeeDomains": [
     "acme.com"
+   ],
+   "attendees": [
+    {
+     "email": "priya@acme.com",
+     "isOrganizer": true,
+     "response": "accepted"
+    },
+    {
+     "email": "you@acme.com",
+     "isSelf": true,
+     "response": "accepted"
+    },
+    {
+     "email": "sam@acme.com",
+     "response": "accepted"
+    },
+    {
+     "email": "lena@acme.com",
+     "response": "accepted"
+    },
+    {
+     "email": "mo@acme.com"
+    },
+    {
+     "email": "ruth@acme.com",
+     "response": "accepted"
+    },
+    {
+     "email": "joe@acme.com",
+     "response": "tentative"
+    }
    ],
    "colorKey": "blue",
    "htmlLink": "https://www.google.com/calendar/event?eid=c3RhbmR1cDRrMnFfMjAyNjExMDRUMDgzMDAwWiB5b3VAYWNtZS5jb20",
@@ -3017,6 +3091,25 @@
     "acme.com",
     "vendorly.example"
    ],
+   "attendees": [
+    {
+     "email": "lena@vendorly.example",
+     "isOrganizer": true,
+     "response": "accepted"
+    },
+    {
+     "email": "you@acme.com",
+     "isSelf": true,
+     "response": "declined"
+    },
+    {
+     "email": "priya@acme.com"
+    },
+    {
+     "email": "mo@vendorly.example",
+     "response": "accepted"
+    }
+   ],
    "colorKey": "blue",
    "htmlLink": "https://www.google.com/calendar/event?eid=NjA2NDVhNzU3MGM4N2FmMTFjYmUgeW91QGFjbWUuY29t",
    "iCalUID": "60645a7570c87af11cbe@google.com",
@@ -3043,6 +3136,29 @@
    "attendeeDomains": [
     "acme.com",
     "harbor.example"
+   ],
+   "attendees": [
+    {
+     "email": "ines@harbor.example",
+     "isOrganizer": true,
+     "response": "accepted"
+    },
+    {
+     "email": "tom@harbor.example",
+     "response": "accepted"
+    },
+    {
+     "email": "priya@acme.com",
+     "response": "accepted"
+    },
+    {
+     "email": "sam@acme.com",
+     "response": "accepted"
+    },
+    {
+     "email": "you@acme.com",
+     "isSelf": true
+    }
    ],
    "colorKey": "purple",
    "description": "Q4 numbers and the seed extension.\nDeck: https://harbor.example/deck/q4",

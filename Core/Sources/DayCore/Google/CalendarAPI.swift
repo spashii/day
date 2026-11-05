@@ -19,7 +19,8 @@ public struct CalendarAPI: Sendable {
     static let eventFields =
         "nextPageToken,nextSyncToken,items(id,iCalUID,status,summary,description,location,"
         + "htmlLink,colorId,eventLabelId,start,end,originalStartTime,recurringEventId,"
-        + "transparency,eventType,organizer(self),attendees(email,self,resource,responseStatus),"
+        + "transparency,eventType,organizer(self),"
+        + "attendees(email,displayName,organizer,self,resource,optional,responseStatus),"
         + "hangoutLink,conferenceData/entryPoints(entryPointType,uri))"
     static let calendarListFields =
         "nextPageToken,nextSyncToken,items(id,summary,summaryOverride,backgroundColor,selected,"

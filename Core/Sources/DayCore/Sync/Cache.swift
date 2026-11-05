@@ -94,6 +94,18 @@ public struct CacheDirectory: Hashable, Sendable {
     }
 }
 
+/// What the saved events contain, stamped into `sync-<sub>.json`. Raise `current` when Day
+/// starts keeping a field it did not keep before: an incremental read only returns events
+/// that changed, so the events already saved would otherwise lack the field until their
+/// calendar's next daily full read. A cache stamped lower is read as never synced
+/// (`CacheDirectory.account(_:)`): the next refresh reads every shown calendar's window in
+/// full and replaces its events, and the old events stay on screen until it has. Sync
+/// tokens are not touched otherwise.
+public enum CacheFormat {
+    /// 1: files written before the number existed. 2: events keep their guest list.
+    public static let current = 2
+}
+
 /// File names, kept in one place so the app, the widget and the tests agree.
 public enum CacheFile {
     public static let accounts = "accounts.json"
@@ -171,15 +183,25 @@ public struct EventsFile: Codable, Hashable, Sendable {
 /// sync token, in `sync-<sub>.json` beside the events. Small, so it is written on every
 /// refresh.
 public struct SyncFile: Codable, Hashable, Sendable {
+    /// `CacheFormat.current` when the file was written; 1 for a file that has no number.
+    public var format: Int
     /// The last refresh in which every shown calendar of the account answered.
     /// `Offline. Showing events as of 9:40.` reads it. Nil until one has.
     public var fetchedAt: Date?
     /// One entry per calendar that has been fetched.
     public var calendars: [CalendarSync]
 
-    public init(fetchedAt: Date?, calendars: [CalendarSync]) {
+    public init(fetchedAt: Date?, calendars: [CalendarSync], format: Int = CacheFormat.current) {
+        self.format = format
         self.fetchedAt = fetchedAt
         self.calendars = calendars
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        format = try c.decodeIfPresent(Int.self, forKey: .format) ?? 1
+        fetchedAt = try c.decodeIfPresent(Date.self, forKey: .fetchedAt)
+        calendars = try c.decode([CalendarSync].self, forKey: .calendars)
     }
 }
 
@@ -229,10 +251,12 @@ extension CacheDirectory {
         let events = read(EventsFile.self, from: CacheFile.events(id))
         guard events != nil || sync != nil else { return nil }
         // Events with no sync state read as never synced: every calendar gets a full read,
-        // which writes one.
+        // which writes one. So do events from an older format, whose tokens would only ever
+        // bring the changes and never the field the format added.
+        let stale = (sync?.format ?? CacheFormat.current) < CacheFormat.current
         return AccountCache(
             fetchedAt: sync?.fetchedAt, events: events?.events ?? [],
-            sync: events == nil ? [] : sync?.calendars ?? [])
+            sync: events == nil || stale ? [] : sync?.calendars ?? [])
     }
 
     /// Writes `account`, the events file only when its events differ from `previous`'s.
