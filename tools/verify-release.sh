@@ -72,7 +72,12 @@ while true; do
 done
 say "the feed lists build $build"
 
-defaults write $domain SULastCheckTime -date "2001-01-01 00:00:00 +0000"
+# Asked again every 5 minutes: the update host caches the feed for that long, so one check
+# can still be served the old feed after another saw the new one. Day ignores the request
+# while it holds an update or a check is under way, so asking again never disturbs either.
+ask() { defaults write $domain SULastCheckTime -date "2001-01-01 00:00:00 +0000" }
+ask
+asked=$(date +%s)
 if ! pgrep -qx Day; then
   open -g $app
   say "Day was not running; opened it in the background"
@@ -88,6 +93,10 @@ while (( $(date +%s) < deadline )); do
   if [[ $now != "$last" && -n ${now// /} ]]; then
     say "installed: $now"
     last=$now
+  fi
+  if (( $(date +%s) - asked >= 300 )); then
+    ask
+    asked=$(date +%s)
   fi
   sleep 10
 done
