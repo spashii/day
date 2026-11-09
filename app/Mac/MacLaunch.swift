@@ -38,8 +38,17 @@ final class MacLaunch {
             model = nil
         }
         state = MacState(store: store)
-        // Screenshots and tests pass -UseFixtures; Sparkle stays off for them.
-        updater = Updater(start: UserDefaults.standard.string(forKey: "UseFixtures") == nil)
+        // Screenshots and tests pass -UseFixtures; Sparkle stays off for them. The events are
+        // the menu bar label's, read at the moment the update asks rather than on the store's
+        // minute clock, so the two minutes around a start are exact.
+        updater = Updater(
+            start: UserDefaults.standard.string(forKey: "UseFixtures") == nil,
+            upcoming: { [store] now in
+                let today = CivilDate(now, in: store.calendar)
+                return nextEvents(
+                    events: store.events(in: today...today.adding(days: 8)), now: now,
+                    calendar: store.calendar)
+            })
     }
 }
 

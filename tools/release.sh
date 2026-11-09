@@ -22,7 +22,9 @@
 #                 with the image, then commits and pushes the feed and the cask, in that order,
 #                 so no Mac is offered an update that is not there yet. It needs a clean,
 #                 pushed checkout, gh logged in as spashii, and every credential for the parts
-#                 it builds; all of that is checked before anything is built.
+#                 it builds; all of that is checked before anything is built. A Mac release
+#                 then runs tools/verify-release.sh, which fails it unless Day in this Mac's
+#                 /Applications installs it within 20 minutes.
 #   --dry-run     builds with no identity and no Apple account, so nothing is notarized,
 #                 uploaded or written to the feed. For a check that the release path builds. It
 #                 is the only mode that accepts the placeholder Google client ID (see Google client above).
@@ -479,6 +481,10 @@ if $publish; then
     git push -q
   fi
   echo "Published v$version."
+  if $doMac; then
+    # Published is not verified: that waits until Day on this Mac has installed it.
+    tools/verify-release.sh $version $number
+  fi
 elif $doMac && $canFeed; then
   echo "Updated site/appcast.xml and Casks/day.rb; tools/release.sh --publish uploads and pushes."
 fi

@@ -71,6 +71,14 @@ targets:
         SUFeedURL: https://apps.idea2prod.in/day/appcast.xml
         # Updates must be signed with the matching private key, kept with the Developer ID.
         SUPublicEDKey: YLvPSGEaYiPsXphy/q9LCDGs2s0qp8hM2LVBIWbl78c=
+        # Check and install without asking. A menu bar app is almost never quit, so an update
+        # that waits on a question or on a quit may never land; with these set Sparkle never
+        # asks, and Mac/UpdaterDelegate.swift picks the moment to install. The interval is
+        # Sparkle's default of a day, written out because the update host counts checks and
+        # one a day per Mac keeps Day's counts comparable with the other apps'.
+        SUEnableAutomaticChecks: true
+        SUAutomaticallyUpdate: true
+        SUScheduledCheckInterval: 86400
         # day:// for clicks on the desktop widget, which open Day on a day.
         CFBundleURLTypes:
           - CFBundleURLName: io.github.spashii.day

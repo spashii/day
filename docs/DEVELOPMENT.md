@@ -103,6 +103,17 @@ tools/release.sh --publish
 
 It needs a clean checkout whose HEAD is pushed, `gh` logged in as `spashii`, and every credential above for the platforms it builds; it checks all of that before building anything. It runs the tests, uploads the iPhone build to TestFlight, creates GitHub release `vVERSION` with the disk image and its checksum, then commits and pushes `site/appcast.xml` and `Casks/day.rb`, in that order, so no Mac is offered an update that is not there yet. `--mac` and `--iphone` publish one platform: a failed upload is repeated with `--iphone --publish`.
 
+### Verifying
+
+No release counts as verified until `/Applications/Day.app` on the owner's Mac, the one that builds Day, shows it. A feed that lists an update proves nothing about whether Day installs it, and a menu bar app is almost never quit, so an update that waits for a quit can stay staged for weeks. Day installs a downloaded update itself instead, at the first idle moment: when it is not the active app, none of its windows or its menu bar panel is in use, and no event starts within two minutes of now (`Core/Sources/DayCore/Rules/UpdateInstall.swift`).
+
+```sh
+tools/verify-release.sh                  # the newest release in site/appcast.xml
+DAY_MAC=build-mac tools/verify-release.sh 0.1.1 20   # from Linux: a given version and build
+```
+
+It reads `CFBundleShortVersionString` and `CFBundleVersion` from `/Applications/Day.app` and waits, up to 20 minutes in all, for the feed to list the release and then for both to match it, and exits non-zero otherwise. To have Day check at once it moves Sparkle's `SULastCheckTime` back, which a running Day takes as a request to check now; it never quits Day, and the install waits for Day's own idle moment. `tools/release.sh --publish` runs it after a Mac release. Each step of an update Day holds is in the log: `log show --last 1h --predicate 'subsystem == "io.github.spashii.day" AND category == "update"'`.
+
 Before the first release, check [site/WHAT-NOT-TO-CLAIM.md](../site/WHAT-NOT-TO-CLAIM.md) against the README, the site and the store listing. The repository starts private and goes public at the first Mac release.
 
 ### Homebrew
