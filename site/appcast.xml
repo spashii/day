@@ -7,6 +7,14 @@
     <language>en</language>
     <!-- tools/release.sh adds each release below this line. -->
     <item>
+      <title>Day 0.1.1</title>
+      <pubDate>Mon, 09 Nov 2026 13:42:04 +0000</pubDate>
+      <sparkle:version>18</sparkle:version>
+      <sparkle:shortVersionString>0.1.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+      <enclosure url="https://github.com/spashii/day/releases/download/v0.1.1/Day-0.1.1.dmg" sparkle:edSignature="qz8sjwsMoezEF8poSajwc0o4mwKUMfxWTkGWzemShseBHAi/tK5irnWxJoohy+sDB8Us+V9ehygwEJUad204Bw==" length="5351661" type="application/octet-stream"/>
+    </item>
+    <item>
       <title>Day 0.1.0</title>
       <pubDate>Thu, 05 Nov 2026 16:49:50 +0000</pubDate>
       <sparkle:version>15</sparkle:version>
