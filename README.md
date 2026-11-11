@@ -30,7 +30,7 @@ Not in Day: editing or creating events, replying to invitations, search, a week 
 
 ## Install
 
-**Mac.** Download the disk image from the [latest release](https://apps.idea2prod.in/day/download), open it, and drag Day to Applications. Or install it with Homebrew:
+**Mac.** Download the disk image from the [latest release](https://github.com/spashii/day/releases/latest), open it, and drag Day to Applications. Or install it with Homebrew:
 
 ```sh
 brew tap spashii/day https://github.com/spashii/day
@@ -55,11 +55,11 @@ On the Mac, the keyboard follows Apple Calendar: Command-T for today, Shift-Comm
 
 ## Privacy
 
-**Mac.** Day reads your calendars from Google and keeps them on your devices. Your sign-in moves between them in iCloud Keychain, which is end-to-end encrypted. To pick up changes sooner, Google tells Day's server at apps.idea2prod.in that a calendar changed, never what changed. What the server keeps about your devices is in Day's [privacy policy](https://apps.idea2prod.in/day/privacy.html). On the Mac, Day also checks for updates through apps.idea2prod.in, which counts checks and downloads by app, version and country and never stores your IP address.
+**Mac.** Day reads your calendars from Google and keeps them on your devices. Your sign-in moves between them in iCloud Keychain, which is end-to-end encrypted. To pick up changes sooner, Google tells Day's server that a calendar changed, never what changed. What the server keeps about your devices is in Day's [privacy policy](https://spashii.github.io/day/privacy.html). On the Mac, Day also checks for updates, and the update server counts those checks by app, version and country and never stores your IP address.
 
-**iPhone.** Day reads your calendars from Google and keeps them on your devices. Your sign-in moves between them in iCloud Keychain, which is end-to-end encrypted. To pick up changes sooner, Google tells Day's server at apps.idea2prod.in that a calendar changed, never what changed. What the server keeps about your devices is in Day's [privacy policy](https://apps.idea2prod.in/day/privacy.html).
+**iPhone.** Day reads your calendars from Google and keeps them on your devices. Your sign-in moves between them in iCloud Keychain, which is end-to-end encrypted. To pick up changes sooner, Google tells Day's server that a calendar changed, never what changed. What the server keeps about your devices is in Day's [privacy policy](https://spashii.github.io/day/privacy.html).
 
-It has no analytics and no accounts of its own. Day asks Google for read-only access to your calendars and for your email address. The sign-in is kept in iCloud Keychain, or in the device's keychain without it. Which calendars you show, and their icons, sync through iCloud. Your events are stored in the app's own folder: `~/Library/Application Support/Day` on the Mac. The full text is in [site/privacy.html](https://apps.idea2prod.in/day/privacy.html).
+It has no analytics and no accounts of its own. Day asks Google for read-only access to your calendars and for your email address. The sign-in is kept in iCloud Keychain, or in the device's keychain without it. Which calendars you show, and their icons, sync through iCloud. Your events are stored in the app's own folder: `~/Library/Application Support/Day` on the Mac. The full text is in [site/privacy.html](https://spashii.github.io/day/privacy.html).
 
 ## Uninstall
 
